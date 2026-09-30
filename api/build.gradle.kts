@@ -4,6 +4,9 @@ plugins {
 }
 
 dependencies {
+    // Native callback types are compile-time API; the server plugin supplies these clients at runtime.
+    compileOnlyApi("org.mongodb:mongodb-driver-sync:5.6.1")
+    compileOnlyApi("io.lettuce:lettuce-core:6.8.1.RELEASE")
     testImplementation("junit:junit:4.13.2")
 }
 
