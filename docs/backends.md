@@ -20,7 +20,7 @@ is added. Async JDBC scheduling still has a measurable fixed cost.
 ClickHouse uses the ordinary com.clickhouse:jdbc-v2 module with the explicit
 com.clickhouse.jdbc.Driver class. No :all classifier or legacy JDBC facade/HTTP
 transport is included. Required shared client/data libraries remain transitive
-dependencies; the installation ZIP provides them as separate, unmodified JARs.
+dependencies; the bootstrap downloads them from Maven Central without bundling them.
 
 Network JDBC defaults use three-second connection and ten-second socket deadlines;
 PostgreSQL uses seconds and the other drivers milliseconds. Explicit URL settings
@@ -51,18 +51,41 @@ rejected: JDBC would interpret them as options and undermine literal file owners
 Consumers using MongoDB/Redis callbacks must add matching compile-only native
 drivers. Do not bundle conflicting versions in dependent Bukkit plugins. Declare
 `depend: [DataVault]`; the server plugin provides the API and drivers. JDBC-only
-consumers need only DataVault's API and java.sql. Dependencies are not relocated;
-avoid bundling competing versions in dependent plugins.
+consumers need only DataVault's API and java.sql. Hikari and bootstrap helpers are
+private and relocated. MongoDB/Lettuce callback types retain their original packages
+and live in the same plugin class loader as the API. Avoid bundling competing native
+client versions in dependent plugins.
 
 ## Installation
 
-`./gradlew build` produces a thin plugin JAR containing only DataVault's own code
-and API. Use `plugin/build/distributions/DataVault-<version>.zip` for installation:
-extract the plugin JAR and `DataVault-libraries` directory together into `plugins`.
-The manifest references those external JARs by relative path; copying the plugin
-JAR alone is insufficient. No third-party classes are merged and no dependencies
-are downloaded at server startup. This does not require Paper or Bukkit's newer
-`libraries` feature. The separate Maven API artifact remains a normal library JAR.
+`./gradlew build` produces `plugin/build/libs/DataVault-<version>.jar`. Copy only
+that JAR into `plugins`; there is no installation ZIP or companion library folder.
+Shadow includes only the small, relocated Libby/ASM/jar-relocator bootstrap helpers,
+not Hikari or any database driver. The separate Maven API artifact remains a normal
+library JAR.
+
+During `onLoad`, the bootstrap downloads the entire build-resolved runtime dependency
+closure from Maven Central into `plugins/DataVault/libraries`. The first startup
+requires network access and may take longer because embedded native drivers are large.
+All versions, sizes and SHA-256 hashes are embedded in a build-generated catalog;
+there is no server-side POM resolution, dynamic version selection or `:all` driver.
+Subsequent starts verify and reuse cached artifacts without downloading them again.
+Downloads are streamed, bounded and published only after validation. Corrupt cache
+entries are repaired; failure prevents service registration and disables the plugin.
+
+Verified dependencies are attached to Bukkit's URLClassLoader using Libby's helper;
+no Paper-specific API or new Bukkit `libraries` field is required. Hikari is relocated
+from the verified original at startup to match the implementation's Shadow-rewritten
+references. Public MongoDB/Lettuce packages must not be blindly relocated. Arbitrary
+server/other-plugin dependency conflicts are still possible for those public packages;
+the tests are not a guarantee against every server's preloaded library versions.
+
+This is startup loading, not per-backend lazy downloading. Hot reload is unsupported;
+restart the server after replacing the JAR. The previous ZIP's `DataVault-libraries`
+directory is no longer used; it is not deleted automatically.
+
+Design references: [LuckPerms selective Shadow/relocation](https://github.com/LuckPerms/LuckPerms/blob/master/bukkit/build.gradle)
+and [Libby runtime classpath loading](https://github.com/AlessioDP/libby#usage).
 
 ## Isolation and performance
 

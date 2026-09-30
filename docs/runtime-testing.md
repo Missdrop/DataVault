@@ -7,14 +7,19 @@ Other operating systems can supply their equivalent installed Java home.
 ## Test tasks
 
 - ./gradlew test: configuration, budgets, bounded admission, cancellation, rollback,
-  state reset and real SQLite, H2 and DuckDB files.
+  state reset, real SQLite/H2/DuckDB files, and deterministic dependency download,
+  offline cache, corruption, HTTP failure and catalog validation checks.
 - ./gradlew :plugin:backendIntegrationTest: six disposable Docker servers, CRUD,
   batches, transaction capabilities, owner isolation and cleanup.
 - ./gradlew :plugin:backendBenchmark: all nine engines against direct drivers.
   Warm-up and rotated repeated rounds; no speed-dependent assertions. Requires Docker.
-- ./gradlew :plugin:packagedBackendTest: real backends using only the thin plugin
-  JAR and JUnit on the explicit classpath; drivers must load from manifest-referenced
-  external JARs. Also checks that no third-party classes were bundled.
+- ./gradlew :plugin:packagedBackendTest: copies only the release plugin JAR into
+  build/test-installation and invokes the production bootstrap in an isolated
+  URLClassLoader. The first run downloads locked Maven dependencies; later runs use
+  validated cache entries. JUnit then tests real backends, shared API/driver class
+  identity, Hikari relocation and separate JDBC service descriptors. No development
+  API/driver jars are supplied to that loader. This is a JavaExec task, not a Gradle
+  Test task; JUnit failures still produce a nonzero process exit and fail the build.
 - ./gradlew :plugin:mariaDbTest: optional local MariaDB at 127.0.0.1:3306.
   Set DATAVAULT_TEST_USER and DATAVAULT_TEST_PASSWORD. Only dedicated datavault_test_
   tables are modified; the datavault_test database is retained.
@@ -61,3 +66,7 @@ MongoDB pools are per server and add monitoring sockets. Redis and embedded engi
 also own native threads. Application-worker reservations are not an OS thread or
 total physical-connection cap. A live Bukkit server smoke test is still separate
 from these backend and thin-JAR tests.
+
+The isolated loader's parent contains only the Java platform, not the server's
+Guava/Netty/native API versions. A live Bukkit smoke test with realistic server and
+dependent-plugin classpaths remains necessary to validate those additional conflicts.

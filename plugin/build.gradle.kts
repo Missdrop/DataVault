@@ -70,6 +70,9 @@ val resolvedMavenPaths = runtimeArtifacts.artifacts.associate { artifact ->
     val id = artifact.id.componentIdentifier as org.gradle.api.artifacts.component.ModuleComponentIdentifier
     artifact.file.name to "${id.group.replace('.', '/')}/${id.module}/${id.version}/${artifact.file.name}"
 }
+check(resolvedMavenPaths.size == runtimeArtifacts.artifacts.size) {
+    "Runtime artifact filenames must be unique when generating Maven coordinates."
+}
 val generateRuntimeCatalog = tasks.register<RuntimeCatalogTask>("generateRuntimeCatalog") {
     artifacts.from(runtimeArtifacts.artifactFiles)
     mavenPaths.set(resolvedMavenPaths)

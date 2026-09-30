@@ -134,7 +134,7 @@ Backend settings and usage: [guide](../../docs/backends.md).
 ## Thin distribution follow-up
 
 The original benchmark verification above preceded the packaging correction.
-Shadow and fat-JAR assembly have now been removed. The plugin contains only its
+At revision 3d64ac0, Shadow and fat-JAR assembly were removed. That plugin contained only its
 own implementation and API (67,623 bytes); external dependencies remain unchanged
 JARs in the adjacent `DataVault-libraries` directory. The installation ZIP is
 124,395,259 bytes: separating libraries does not eliminate their native payloads.
@@ -151,3 +151,36 @@ external drivers load through the plugin manifest. Test containers were removed.
 Performance measurements were not rerun for this packaging-only correction;
 the earlier CSV remains historical data, not a new thin-distribution benchmark.
 A live Bukkit server smoke test remains outstanding.
+
+## Single-JAR Maven bootstrap follow-up
+
+The ZIP distribution was subsequently replaced by a single plugin JAR (417,387
+bytes). Following the selective Shadow/relocation approach used by established
+plugins, only Libby, ASM and jar-relocator helpers are embedded and relocated.
+Hikari and database drivers are excluded from that artifact. Hikari is relocated
+after downloading; MongoDB/Lettuce public callback packages remain unchanged.
+
+On Java 11, a fixture containing only the release JAR, test classes and JUnit
+downloaded 49 pinned artifacts from Maven Central into a fresh plugin cache.
+The plugin-like URLClassLoader had only the Java platform as its parent.
+All 14 packaged cases passed: six Docker server engines, three embedded engines,
+two registry cases and three packaging/class-identity/service-descriptor checks.
+A second run verified existing artifacts without logging any driver downloads and
+passed the same 14 cases. Both runs used the production downloader, classpath
+attachment and Hikari relocation paths, not Gradle's development driver classpath.
+
+Seven additional deterministic bootstrap tests passed: valid offline cache reuse,
+same-size corruption repair, failed checksum publication, HTTP failure cleanup,
+valid/duplicate catalog parsing, missing/malformed catalogs and traversal/hash
+rejection. Plugin unit tests now total 16; API tests remain 4. Final build and
+Java 11 packaged verification passed; no labeled test containers remain.
+
+The catalog locks the complete build-resolved transitive closure, file sizes and
+SHA-256 digests. Downloads stream to temporary files with byte/time limits and
+are verified before publication; corrupt cached originals are not trusted.
+All artifacts load during startup, not lazily per backend. Cached Hikari is
+transformed anew from the verified original so stale relocated bytes are not used.
+
+These are functional/bootstrap checks, not new performance measurements. No live
+Bukkit server was started. A real server's preloaded public library versions and
+other plugins may still introduce conflicts that the isolated loader does not cover.
