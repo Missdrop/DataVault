@@ -1,0 +1,6 @@
+# Global reservations include databases that are still opening or draining.
+# Pools and task queues remain separate for each plugin.
+limits:
+  connections: 48
+  workers: 32
+  queued-tasks: 8192
