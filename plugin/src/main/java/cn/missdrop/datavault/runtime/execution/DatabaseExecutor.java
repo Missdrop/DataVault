@@ -18,6 +18,7 @@ public final class DatabaseExecutor {
     private final ThreadPoolExecutor workers;
     private final CompletableFuture<Void> terminated = new CompletableFuture<>();
 
+    /** Allocates lazy workers; the cleanup callback runs after accepted tasks have drained. */
     public DatabaseExecutor(String owner, ExecutionOptions options, Runnable onTermination) {
         AtomicInteger sequence = new AtomicInteger();
         workers = new ThreadPoolExecutor(options.workers(), options.workers(),
@@ -43,11 +44,13 @@ public final class DatabaseExecutor {
         workers.allowCoreThreadTimeOut(true);
     }
 
+    /** Returns failures through the stage, including local overload and closure rejection. */
     public <T> CompletionStage<T> submit(CheckedTask<T> task) {
         CompletableFuture<T> result = new CompletableFuture<>();
         try {
             workers.execute(() -> {
                 if (result.isCancelled()) {
+                    // Only not-yet-started work is skipped; interrupting JDBC is driver-specific.
                     return;
                 }
                 try {
@@ -65,12 +68,19 @@ public final class DatabaseExecutor {
         return result;
     }
 
+    /** Stops admission immediately; repeated calls observe the same termination result. */
     public CompletionStage<Void> close() {
         workers.shutdown();
         return terminated.minimalCompletionStage();
     }
 
+    /** Observes cleanup without initiating it, allowing registry lifecycle coordination. */
+    public CompletionStage<Void> whenClosed() {
+        return terminated.minimalCompletionStage();
+    }
+
     @FunctionalInterface
+    /** Internal work may fail with JDBC or other checked exceptions. */
     public interface CheckedTask<T> {
         T run() throws Exception;
     }
