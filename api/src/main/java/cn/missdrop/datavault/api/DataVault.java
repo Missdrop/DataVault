@@ -1,6 +1,7 @@
 package cn.missdrop.datavault.api;
 
 import cn.missdrop.datavault.api.config.DatabaseConfig;
+import cn.missdrop.datavault.api.config.StorageConfig;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
@@ -13,14 +14,29 @@ public interface DataVault {
      * @param config immutable backend settings
      * @return stage completing when the database is ready
      */
-    CompletionStage<Database> register(PluginId owner, DatabaseConfig config);
+    default CompletionStage<Database> register(PluginId owner, DatabaseConfig config) {
+        return register(owner, (StorageConfig<Database>) config);
+    }
+
+    /** Opens a typed backend without pretending that native stores support JDBC transactions. */
+    <S extends Storage> CompletionStage<S> register(PluginId owner, StorageConfig<S> config);
 
     /**
      * Returns a registered database without opening connections.
      * @param owner stable plugin identifier
      * @return ready database, or empty while opening or after removal
      */
-    Optional<Database> find(PluginId owner);
+    default Optional<Database> find(PluginId owner) {
+        return findStorage(owner).filter(Database.class::isInstance).map(Database.class::cast);
+    }
+
+    /** Returns any ready backend, including native MongoDB and Redis handles. */
+    Optional<Storage> findStorage(PluginId owner);
+
+    /** Returns a handle only when its capabilities match the requested interface. */
+    default <S extends Storage> Optional<S> find(PluginId owner, Class<S> handleType) {
+        return findStorage(owner).filter(handleType::isInstance).map(handleType::cast);
+    }
 
     /**
      * Returns an immutable snapshot of registered owners.

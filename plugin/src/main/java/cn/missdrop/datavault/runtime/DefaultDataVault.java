@@ -1,8 +1,7 @@
 package cn.missdrop.datavault.runtime;
 
 import cn.missdrop.datavault.api.*;
-import cn.missdrop.datavault.api.config.DatabaseConfig;
-import cn.missdrop.datavault.runtime.connection.PoolFactory;
+import cn.missdrop.datavault.api.config.StorageConfig;
 import cn.missdrop.datavault.runtime.registry.ResourceBudget;
 import cn.missdrop.datavault.runtime.registry.SqliteFiles;
 import java.util.*;
@@ -16,7 +15,7 @@ public final class DefaultDataVault implements DataVault {
     private final Object lock = new Object();
     private final Map<PluginId, Entry> entries = new HashMap<>();
     private final SqliteFiles files = new SqliteFiles();
-    private final PoolFactory pools = new PoolFactory();
+    private final StorageFactory storage = new StorageFactory();
     private final ResourceBudget budget;
     private final ThreadPoolExecutor lifecycle;
     private CompletableFuture<Void> shutdown;
@@ -35,7 +34,7 @@ public final class DefaultDataVault implements DataVault {
 
     @Override
     /** Reserves resources before scheduling I/O, preventing concurrent oversubscription. */
-    public CompletionStage<Database> register(PluginId owner, DatabaseConfig config) {
+    public <S extends Storage> CompletionStage<S> register(PluginId owner, StorageConfig<S> config) {
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(config, "config");
         Entry entry = new Entry(config);
@@ -57,21 +56,14 @@ public final class DefaultDataVault implements DataVault {
             release(owner, entry);
             entry.ready.completeExceptionally(failure);
         }
-        return entry.ready.thenApply(database -> database);
+        return entry.ready.thenApply(config.handleType()::cast);
     }
 
     /** Opens the pool off-thread and releases every reservation on partial failure. */
     private void open(PluginId owner, Entry entry) {
         try {
             files.reserve(owner, entry.config);
-            var pool = pools.open(owner, entry.config);
-            JdbcDatabase database;
-            try {
-                database = new JdbcDatabase(owner, entry.config, pool, () -> release(owner, entry));
-            } catch (Throwable failure) {
-                pool.close();
-                throw failure;
-            }
+            Storage database = storage.open(owner, entry.config, () -> release(owner, entry));
             // The database releases its reservation before completing a direct close().
             entry.ready.complete(database);
         } catch (Throwable failure) {
@@ -92,7 +84,7 @@ public final class DefaultDataVault implements DataVault {
 
     @Override
     /** Opening registrations are deliberately absent until validation has succeeded. */
-    public Optional<Database> find(PluginId owner) {
+    public Optional<Storage> findStorage(PluginId owner) {
         synchronized (lock) {
             Entry entry = entries.get(owner);
             return entry == null || entry.ready.isCompletedExceptionally()
@@ -156,10 +148,10 @@ public final class DefaultDataVault implements DataVault {
 
     /** Owner reservation persists from admission until pool cleanup finishes. */
     private static final class Entry {
-        final DatabaseConfig config;
-        final CompletableFuture<JdbcDatabase> ready = new CompletableFuture<>();
+        final StorageConfig<?> config;
+        final CompletableFuture<Storage> ready = new CompletableFuture<>();
 
-        Entry(DatabaseConfig config) {
+        Entry(StorageConfig<?> config) {
             this.config = config;
         }
     }
