@@ -1,8 +1,9 @@
 # API design — first milestone
 
 The API is Java 11 compatible and has no Bukkit, HikariCP or driver dependencies.
-This milestone defines contracts and validated configuration, not a working
-database provider. Runtime implementation and live database tests follow next.
+The plugin module now contains a JDBC runtime with isolated HikariCP pools,
+bounded per-owner workers, scoped transactions, and global resource reservations.
+SQLite file and local MariaDB integration tests exercise real connections.
 
 ## Responsibilities
 
@@ -19,6 +20,12 @@ and SQLite/MySQL connection factories. Use composition to inject these component
 Each owner gets its own pool and execution queue. SQLite also owns a dedicated
 local file and a single worker; MySQL has independently sized workers and pool.
 Shared JVM, disk and MySQL server resources remain shared.
+
+Runtime responsibilities are separated into DefaultDataVault (registration),
+ResourceBudget (global reservations), SqliteFiles (file ownership), PoolFactory
+(driver setup), DatabaseExecutor (bounded admission), JdbcDatabase (composition),
+and Transactions (commit and rollback). Bukkit only registers the DataVault
+service and initiates asynchronous cleanup on disable.
 
 ## Resource and concurrency contract
 

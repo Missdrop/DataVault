@@ -59,6 +59,8 @@ public class MariaDbIntegrationTest {
                 }
             }).toCompletableFuture().get(10, TimeUnit.SECONDS);
             assertEquals(10, value);
+            BatchWorkload.verify(database, table, 2000);
+            verifyIndependentPool(vault, config, database);
         } finally {
             try {
                 database.execute(connection -> {
@@ -71,5 +73,33 @@ public class MariaDbIntegrationTest {
                 vault.shutdown().toCompletableFuture().get(15, TimeUnit.SECONDS);
             }
         }
+    }
+
+    /** A slow SQL on one owner must not consume the second owner's workers or pool. */
+    private void verifyIndependentPool(DefaultDataVault vault, MysqlConfig config,
+                                       cn.missdrop.datavault.api.Database first) throws Exception {
+        var second = vault.register(PluginId.of("mysql-other"), config)
+                .toCompletableFuture().get(15, TimeUnit.SECONDS);
+        var started = new java.util.concurrent.CountDownLatch(1);
+        var slow = first.execute(connection -> {
+            try (var statement = connection.createStatement()) {
+                started.countDown();
+                try (var rows = statement.executeQuery("SELECT SLEEP(2)")) {
+                    rows.next();
+                    return rows.getInt(1);
+                }
+            }
+        }).toCompletableFuture();
+        assertTrue(started.await(5, TimeUnit.SECONDS));
+        int result = second.execute(connection -> {
+            try (var statement = connection.createStatement();
+                 var rows = statement.executeQuery("SELECT 1")) {
+                rows.next();
+                return rows.getInt(1);
+            }
+        }).toCompletableFuture().get(5, TimeUnit.SECONDS);
+        assertEquals(1, result);
+        assertFalse("Slow owner's SQL should still be running", slow.isDone());
+        slow.get(10, TimeUnit.SECONDS);
     }
 }

@@ -58,6 +58,7 @@ public class JdbcDatabaseTest {
                 }
             }).toCompletableFuture().get(5, TimeUnit.SECONDS);
             assertEquals("wal", mode);
+            BatchWorkload.verify(database, "accounts", 5000);
         } finally {
             database.close().toCompletableFuture().get(5, TimeUnit.SECONDS);
         }
