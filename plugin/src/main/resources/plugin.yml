@@ -6,3 +6,4 @@ author: Missdrop
 website: https://github.com/Missdrop/DataVault
 api-version: '1.15'
 load: STARTUP
+folia-supported: true
