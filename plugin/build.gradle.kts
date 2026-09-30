@@ -15,6 +15,7 @@ java {
 dependencies {
     implementation(project(":api"))
     implementation("com.zaxxer:HikariCP:7.1.0")
+    testImplementation("junit:junit:4.13.2")
     compileOnly("org.bukkit:bukkit:1.15.2-R0.1-SNAPSHOT")
 }
 
