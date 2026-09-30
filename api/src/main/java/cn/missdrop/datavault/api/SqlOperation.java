@@ -11,5 +11,11 @@ import java.sql.SQLException;
  */
 @FunctionalInterface
 public interface SqlOperation<T> {
+    /**
+     * Runs JDBC work using the borrowed connection.
+     * @param connection borrowed connection, valid only for this invocation
+     * @return detached callback result
+     * @throws SQLException if JDBC work fails
+     */
     T execute(Connection connection) throws SQLException;
 }

@@ -10,6 +10,11 @@ public final class PluginId {
 
     private PluginId(String value) { this.value = value; }
 
+    /**
+     * Creates a stable identifier; rejects uppercase, separators and unsafe path characters.
+     * @param value lowercase plugin identifier
+     * @return validated immutable configuration identifier
+     */
     public static PluginId of(String value) {
         Objects.requireNonNull(value, "value");
         if (!VALID.matcher(value).matches()) {
@@ -18,7 +23,13 @@ public final class PluginId {
         return new PluginId(value);
     }
 
-    public String value() { return value; }
+    /**
+     * Returns the validated lowercase identifier.
+     * @return the validated lowercase identifier
+     */
+    public String value() {
+        return value;
+    }
 
     @Override
     public boolean equals(Object other) {
@@ -29,5 +40,11 @@ public final class PluginId {
     public int hashCode() { return value.hashCode(); }
 
     @Override
-    public String toString() { return value; }
+    /**
+     * Returns function toString() { [native code] }.
+     * @return function toString() { [native code] }
+     */
+    public String toString() {
+        return value;
+    }
 }

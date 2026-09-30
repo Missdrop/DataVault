@@ -8,6 +8,7 @@ import java.sql.SQLException;
 public final class Transactions {
     private Transactions() {}
 
+    /** Commits only after successful work; preserve the original failure if rollback also fails. */
     public static <T> T run(Connection connection, SqlOperation<T> operation) throws SQLException {
         connection.setAutoCommit(false);
         try {

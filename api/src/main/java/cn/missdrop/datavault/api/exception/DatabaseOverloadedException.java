@@ -4,5 +4,11 @@ package cn.missdrop.datavault.api.exception;
 public final class DatabaseOverloadedException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
-    public DatabaseOverloadedException(String message) { super(message); }
+    /**
+     * Creates an admission failure for a full per-owner queue.
+     * @param message overload context without database credentials
+     */
+    public DatabaseOverloadedException(String message) {
+        super(message);
+    }
 }

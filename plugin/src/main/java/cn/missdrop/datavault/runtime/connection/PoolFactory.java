@@ -12,6 +12,7 @@ import org.sqlite.SQLiteDataSource;
 
 /** Builds and validates one owner's pool. Driver-specific settings stay here. */
 public final class PoolFactory {
+    /** Validates the first connection before returning ownership to the caller. */
     public HikariDataSource open(PluginId owner, DatabaseConfig config) throws Exception {
         HikariConfig pool = new HikariConfig();
         pool.setPoolName("DataVault-" + owner.value());
@@ -35,6 +36,7 @@ public final class PoolFactory {
         }
     }
 
+    /** A single connection and worker serialize per-file access; WAL preserves external readers. */
     private void configureSqlite(HikariConfig pool, SqliteConfig config) throws Exception {
         Files.createDirectories(config.file().getParent());
         SQLiteConfig settings = new SQLiteConfig();
@@ -49,6 +51,7 @@ public final class PoolFactory {
         pool.setConnectionTimeout(3000);
     }
 
+    /** Supplies a driver data source directly, avoiding dependence on global driver discovery. */
     private void configureMysql(HikariConfig pool, MysqlConfig config) throws Exception {
         MysqlDataSource source = new MysqlDataSource();
         source.setUrl(config.jdbcUrl());

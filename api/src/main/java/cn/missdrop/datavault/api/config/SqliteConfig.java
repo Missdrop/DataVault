@@ -15,6 +15,14 @@ public final class SqliteConfig implements DatabaseConfig {
     private final boolean wal;
     private final ExecutionOptions execution;
 
+    /**
+     * Validates and stores immutable settings before resources are allocated.
+     * @param file local SQLite file
+     * @param busyTimeout nonnegative SQLite lock wait
+     * @param wal whether to enable WAL mode
+     * @param queueCapacity positive waiting-task limit
+     * @throws IllegalArgumentException if settings exceed their supported bounds
+     */
     public SqliteConfig(Path file, Duration busyTimeout, boolean wal, int queueCapacity) {
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
         this.busyTimeout = Objects.requireNonNull(busyTimeout, "busyTimeout");
@@ -27,17 +35,46 @@ public final class SqliteConfig implements DatabaseConfig {
         this.execution = new ExecutionOptions(1, queueCapacity);
     }
 
+    /**
+     * Creates WAL-enabled local storage with one worker and a bounded queue.
+     * @param file local database path
+     * @return validated immutable configuration
+     */
     public static SqliteConfig of(Path file) {
         return new SqliteConfig(file, Duration.ofSeconds(5), true, 256);
     }
 
-    public Path file() { return file; }
-    public Duration busyTimeout() { return busyTimeout; }
-    public boolean wal() { return wal; }
+    /**
+     * Returns normalized absolute local database file.
+     * @return normalized absolute local database file
+     */
+    public Path file() {
+        return file;
+    }
+    /**
+     * Returns maximum SQLite lock wait per connection.
+     * @return maximum SQLite lock wait per connection
+     */
+    public Duration busyTimeout() {
+        return busyTimeout;
+    }
+    /**
+     * Returns whether write-ahead logging is enabled.
+     * @return whether write-ahead logging is enabled
+     */
+    public boolean wal() {
+        return wal;
+    }
 
     @Override
     public DatabaseType type() { return DatabaseType.SQLITE; }
 
     @Override
-    public ExecutionOptions execution() { return execution; }
+    /**
+     * Returns execution.
+     * @return execution
+     */
+    public ExecutionOptions execution() {
+        return execution;
+    }
 }
