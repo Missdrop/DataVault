@@ -12,7 +12,7 @@ final class Workload {
     final int writes;
     final SqlOperation<Integer> operation;
 
-    private Workload(String name, int iterations, boolean transaction,
+    Workload(String name, int iterations, boolean transaction,
                      int writes, SqlOperation<Integer> operation) {
         this.name = name;
         this.iterations = iterations;

@@ -33,6 +33,14 @@ tasks.withType<JavaCompile>().configureEach {
     options.release = 11
 }
 
+tasks.withType<Test>().configureEach {
+    // Gradle itself needs a newer JVM; launch tests on Java 11 to verify runtime compatibility.
+    providers.gradleProperty("testJavaHome").orNull?.let {
+        val windowsJava = file("$it/bin/java.exe")
+        executable = (if (windowsJava.isFile) windowsJava else file("$it/bin/java")).absolutePath
+    }
+}
+
 tasks.processResources {
     val properties = mapOf("version" to project.version)
     inputs.properties(properties)
@@ -61,8 +69,32 @@ tasks.assemble {
 }
 
 tasks.test {
+    exclude("**/*DockerTest.class")
     exclude("**/MariaDbIntegrationTest.class")
     exclude("**/PerformanceComparisonTest.class")
+}
+
+tasks.register<Test>("backendIntegrationTest") {
+    description = "Verifies server backends in disposable Docker containers."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/*DockerTest.class")
+    exclude("**/benchmark/**")
+    maxParallelForks = 1
+    outputs.upToDateWhen { false }
+    testLogging { events("passed", "failed") }
+}
+
+tasks.register<Test>("backendBenchmark") {
+    description = "Compares all backends with direct drivers; requires Docker."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/*BenchmarkDockerTest.class")
+    maxParallelForks = 1
+    outputs.upToDateWhen { false }
+    testLogging { events("passed", "failed", "standardOut") }
 }
 
 tasks.register<Test>("mariaDbTest") {

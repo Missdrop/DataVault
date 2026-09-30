@@ -26,6 +26,13 @@ tasks.withType<JavaCompile>().configureEach {
     options.release = 11
 }
 
+tasks.withType<Test>().configureEach {
+    providers.gradleProperty("testJavaHome").orNull?.let {
+        val windowsJava = file("$it/bin/java.exe")
+        executable = (if (windowsJava.isFile) windowsJava else file("$it/bin/java")).absolutePath
+    }
+}
+
 tasks.withType<Javadoc>().configureEach {
     options.encoding = "UTF-8"
 }

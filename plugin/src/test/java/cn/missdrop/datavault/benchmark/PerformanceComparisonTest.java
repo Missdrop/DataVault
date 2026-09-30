@@ -41,7 +41,7 @@ public class PerformanceComparisonTest {
     }
 
     /** Shares the exact same pool across paths, eliminating differences in pool settings. */
-    private void compare(String backend, DatabaseConfig config) throws Exception {
+    static void compare(String backend, DatabaseConfig config) throws Exception {
         String table = "datavault_test_bench_" + java.util.UUID.randomUUID().toString().replace("-", "");
         var owner = PluginId.of("benchmark");
         var pool = new PoolFactory().open(owner, config);
