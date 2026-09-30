@@ -184,3 +184,47 @@ transformed anew from the verified original so stale relocated bytes are not use
 These are functional/bootstrap checks, not new performance measurements. No live
 Bukkit server was started. A real server's preloaded public library versions and
 other plugins may still introduce conflicts that the isolated loader does not cover.
+
+## Live Purpur/Lophine follow-up
+
+The user supplied Purpur 26.3-2642 (0b28be2) and Lophine 26.3-811 (e1a6850),
+respectively Paper-family and Folia-family cores. Both were run on Zulu Java
+25.0.2+10-LTS in isolated build directories, with loopback-only ephemeral game
+ports, fresh worlds and no pre-existing plugins. The supplied core caches were
+copied to avoid changing the original server directories. Existing accepted EULA
+files were copied; no EULA acceptance was changed.
+
+The initial unmodified plugin enabled successfully on Purpur but Lophine rejected
+it before onLoad because `folia-supported` was absent. Following user approval,
+the support declaration was added. No Paper/Folia dependency or region scheduler
+was introduced into the platform-independent API/runtime.
+
+A separate DataVaultSmoke plugin containing neither API nor driver classes then
+verified both cores successfully:
+
+- Cross-plugin Bukkit service lookup and native MongoDB/Lettuce class identity.
+- SQLite, H2 and DuckDB transaction/CRUD round-trips and owner unregistration.
+- MongoDB native collection CRUD and Redis asynchronous commands against dedicated,
+  ephemeral Docker servers, followed by owner/client cleanup.
+- Completion of all configured operations without DataVault linkage or region-thread
+  ownership exceptions. Relocated Hikari pools started and closed normally.
+- Cold dependency downloads on each core; subsequent cache verification without
+  driver download log entries. Lophine was restarted with its populated cache and
+  passed the same consumer checks again.
+- Graceful `stop` and normal DataVault disable on both cores; the two disposable
+  MongoDB/Redis containers were stopped and automatically removed.
+
+The tested release JAR SHA-256 was
+`dcba1902be525ffbf9eadae4f12be664c0b143fb5116d636d76d6ab1205a2e06`.
+`build :plugin:serverSmokeJar` passed with Java 11 test JVMs; server cores themselves
+ran on Java 25. The fixture source is retained under `plugin/src/serverSmoke` and
+is built only by its explicit verification task, not included in the release JAR.
+
+The cores emitted Windows OSHI/Perflib counter warnings, and Lophine emitted SIMD
+configuration notices. These did not prevent startup or the database checks and
+were not modified as part of this task.
+
+This is live functional/classloader verification of five backend types, not a new
+performance benchmark, all-nine-backend server run, oldest-Bukkit test, player-load
+test or proof of compatibility with arbitrary other plugins. Consumers still must
+marshal world/entity interactions to the correct platform/region thread themselves.

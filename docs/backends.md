@@ -95,6 +95,12 @@ keys, MongoDB collections, disk, JVM or network. Use dedicated schemas/databases
 prefixes for data isolation and bounded queries/batches. Larger pools are not
 automatically faster.
 
+The plugin declares Folia support and only uses Bukkit lifecycle/service APIs.
+Database callbacks and future continuations are not guaranteed to execute on a
+Minecraft main or owning region thread. Consumers must schedule entity/world access
+on the appropriate platform scheduler; adding `folia-supported` does not make
+arbitrary consumer callbacks thread-safe.
+
 The fair baseline is a plugin implementing equivalent asynchronous driver access,
 not a blocking query on the Minecraft main thread. Native batch APIs remain available.
 No abstraction can promise to outperform every hand-tuned workload; measured reports

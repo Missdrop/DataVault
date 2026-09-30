@@ -2,7 +2,7 @@
 
 Run Gradle on Java 17 or newer; production code uses --release 11.
 Use -PtestJavaHome="C:/Program Files/Zulu/zulu-11" to run tests on Java 11.
-Other operating systems can supply their equivalent installed Java home.
+  Other operating systems can supply their equivalent installed Java home.
 
 ## Test tasks
 
@@ -64,9 +64,32 @@ shared server locks, CPU, disk, JVM or network.
 
 MongoDB pools are per server and add monitoring sockets. Redis and embedded engines
 also own native threads. Application-worker reservations are not an OS thread or
-total physical-connection cap. A live Bukkit server smoke test is still separate
-from these backend and thin-JAR tests.
+total physical-connection cap. Live-server smoke tests are separate from the
+isolated backend and thin-JAR tests.
 
 The isolated loader's parent contains only the Java platform, not the server's
 Guava/Netty/native API versions. A live Bukkit smoke test with realistic server and
-dependent-plugin classpaths remains necessary to validate those additional conflicts.
+dependent-plugin classpaths is necessary to validate those additional conflicts.
+
+## Live-server consumer fixture
+
+Run `./gradlew build :plugin:serverSmokeJar` to create the release plugin and a
+separate `plugin/build/server-smoke-fixture/DataVault-Smoke-<version>.jar`.
+Install both only in an isolated test server, never a production server. The fixture
+does not bundle API or driver classes and declares a hard dependency on DataVault.
+It performs SQLite/H2/DuckDB transactions and CRUD, verifies native API class identity,
+and unregisters each owner. Success appears as `SMOKE PASS` log markers; failures
+appear as `SMOKE FAIL` with an exception.
+
+Optional MongoDB and Redis checks read `mongo-uri` and `redis-uri` from
+`plugins/DataVaultSmoke/config.yml`. Use only disposable dedicated endpoints: the
+fixture modifies its `datavault_test_live` collection and Redis key. These native
+checks are skipped if endpoints are absent. The fixture uses asynchronous callbacks
+and does not block the platform thread or access worlds/entities from workers.
+
+Use loopback bindings and a fresh world. Preserve the original service directory
+and its EULA acceptance rather than modifying existing worlds or installing the
+fixture in-place. Stop test servers gracefully before removing disposable containers.
+The supplied Purpur 26.3 and Lophine 26.3 cores were verified on Java 25; observations
+are recorded in the performance report's live-server follow-up. These runs do not
+replace oldest-supported Bukkit testing or loaded-region stress tests.
