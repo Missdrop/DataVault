@@ -1,0 +1,6 @@
+name: DataVaultSmoke
+version: '1.0'
+main: cn.missdrop.datavault.smoke.SmokePlugin
+api-version: '1.15'
+depend: [DataVault]
+folia-supported: true

@@ -9,6 +9,18 @@ plugins {
 val bootstrapLibraries by configurations.creating
 configurations.implementation { extendsFrom(bootstrapLibraries) }
 
+val serverSmoke by sourceSets.creating
+configurations.named(serverSmoke.implementationConfigurationName) {
+    extendsFrom(configurations.implementation.get(), configurations.compileOnly.get())
+}
+tasks.register<Jar>("serverSmokeJar") {
+    description = "Builds a separate API-consumer plugin for isolated live-server verification."
+    group = "verification"
+    archiveBaseName = "DataVault-Smoke"
+    destinationDirectory = layout.buildDirectory.dir("server-smoke-fixture")
+    from(serverSmoke.output)
+}
+
 base {
     archivesName = "DataVault"
 }
