@@ -21,6 +21,10 @@ public class ConfigurationTest {
                 .of("jdbc:clickhouse://localhost:8123/default", "default", "").supportsTransactions());
         assertEquals(1, cn.missdrop.datavault.api.config.h2.H2Config.of(Path.of("local"))
                 .connectionBudget());
+        assertThrows(IllegalArgumentException.class, () ->
+                cn.missdrop.datavault.api.config.h2.H2Config.of(Path.of("local;CACHE_SIZE=1024")));
+        // Some filesystems reject '?' before configuration; Unix reaches the JDBC-path guard.
+        assertThrows(IllegalArgumentException.class, () -> SqliteConfig.of(Path.of("local?cache=shared")));
     }
 
     @Test

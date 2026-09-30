@@ -10,7 +10,7 @@ public final class DuckDbConfig extends EmbeddedJdbcConfig {
     private final int memoryLimitMb;
 
     /** Prevents each plugin from starting an unbounded native analytics engine.
-     * @param file dedicated database file or H2 file base
+     * @param file dedicated DuckDB database file
      * @param queueCapacity maximum waiting operations
      * @param nativeThreads maximum DuckDB execution threads
      * @param memoryLimitMb DuckDB memory limit in MiB
@@ -27,7 +27,7 @@ public final class DuckDbConfig extends EmbeddedJdbcConfig {
     /**
      * Returns dedicated file with two native threads and a 256 MiB engine budget.
      * @return dedicated file with two native threads and a 256 MiB engine budget
-     * @param file dedicated database file or H2 file base
+     * @param file dedicated DuckDB database file
      */
     public static DuckDbConfig of(Path file) {
         return new DuckDbConfig(file, 256, 2, 256);

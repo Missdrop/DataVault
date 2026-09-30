@@ -21,7 +21,7 @@ import java.util.Map;
 public final class PoolFactory {
     private final Map<DatabaseType, JdbcBackend> backends = new EnumMap<>(DatabaseType.class);
 
-    /** Driver classes are loaded only when their backend is selected. */
+    /** Explicit backend setup is lazy; JDBC SPI can also discover providers on the classpath. */
     public PoolFactory() {
         backends.put(DatabaseType.SQLITE, new SqliteBackend());
         backends.put(DatabaseType.MYSQL, new MysqlBackend());

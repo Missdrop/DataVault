@@ -1,5 +1,6 @@
 # Global reservations include databases that are still opening or draining.
 # Pools and task queues remain separate for each plugin.
+# Application reservations do not count native driver threads or MongoDB monitoring sockets.
 limits:
   connections: 48
   workers: 32

@@ -45,6 +45,8 @@ These are alternatives: an owner cannot register twice. Use findStorage(owner)
 for any backend, find(owner) for JDBC only, or find(owner, RedisStorage.class).
 Close drains work before releasing the owner. Embedded file conflicts fail instead
 of silently sharing another plugin's database. Files remain after close.
+H2 paths containing semicolons and SQLite paths containing question marks are
+rejected: JDBC would interpret them as options and undermine literal file ownership.
 
 Consumers using MongoDB/Redis callbacks must add matching compile-only native
 drivers. Do not bundle conflicting versions in dependent Bukkit plugins. Declare

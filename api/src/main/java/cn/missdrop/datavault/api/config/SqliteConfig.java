@@ -25,6 +25,10 @@ public final class SqliteConfig implements FileDatabaseConfig {
      */
     public SqliteConfig(Path file, Duration busyTimeout, boolean wal, int queueCapacity) {
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
+        // JDBC query options must not make the actual filename differ from its ownership key.
+        if (this.file.toString().contains("?")) {
+            throw new IllegalArgumentException("SQLite file paths must not contain JDBC query options");
+        }
         this.busyTimeout = Objects.requireNonNull(busyTimeout, "busyTimeout");
         if (busyTimeout.isNegative()
                 || busyTimeout.compareTo(Duration.ofMillis(Integer.MAX_VALUE)) > 0) {
