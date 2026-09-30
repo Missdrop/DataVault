@@ -48,3 +48,18 @@ tasks.jar {
 tasks.assemble {
     dependsOn(tasks.shadowJar)
 }
+
+tasks.test {
+    exclude("**/MariaDbIntegrationTest.class")
+}
+
+tasks.register<Test>("mariaDbTest") {
+    description = "Runs opt-in integration tests against a dedicated local MariaDB database."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/MariaDbIntegrationTest.class")
+    environment("DATAVAULT_TEST_PASSWORD", providers.environmentVariable("DATAVAULT_TEST_PASSWORD").getOrElse(""))
+    environment("DATAVAULT_TEST_USER", providers.environmentVariable("DATAVAULT_TEST_USER").getOrElse("root"))
+    outputs.upToDateWhen { false }
+}
