@@ -1,8 +1,13 @@
-import java.net.URI
+import cn.missdrop.datavault.gradle.RuntimeCatalogTask
 
 plugins {
     java
+    id("com.gradleup.shadow") version "9.6.1"
 }
+
+// Only bootstrap helpers are shaded. Database drivers are never included in the release jar.
+val bootstrapLibraries by configurations.creating
+configurations.implementation { extendsFrom(bootstrapLibraries) }
 
 base {
     archivesName = "DataVault"
@@ -14,6 +19,8 @@ java {
 }
 
 dependencies {
+    bootstrapLibraries("net.byteflux:libby-core:1.3.2")
+    bootstrapLibraries("me.lucko:jar-relocator:1.7")
     implementation(project(":api"))
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("org.xerial:sqlite-jdbc:3.53.4.0")
@@ -53,41 +60,49 @@ tasks.processResources {
 }
 
 // Preserve third-party jars (including native resources and service descriptors) unchanged.
-val runtimeLibraries = configurations.runtimeClasspath.get().incoming.artifactView {
-    componentFilter { it is org.gradle.api.artifacts.component.ModuleComponentIdentifier }
-}.files
-val libraryDirectory = layout.buildDirectory.dir("libs/DataVault-libraries")
-val prepareRuntimeLibraries = tasks.register<Sync>("prepareRuntimeLibraries") {
-    description = "Copies external dependencies beside the thin plugin JAR."
-    from(runtimeLibraries)
-    into(libraryDirectory)
+val bootstrapComponents = bootstrapLibraries.incoming.artifacts.artifacts.map { it.id.componentIdentifier }.toSet()
+val runtimeArtifacts = configurations.runtimeClasspath.get().incoming.artifactView {
+    componentFilter {
+        it is org.gradle.api.artifacts.component.ModuleComponentIdentifier && it !in bootstrapComponents
+    }
+}.artifacts
+val resolvedMavenPaths = runtimeArtifacts.artifacts.associate { artifact ->
+    val id = artifact.id.componentIdentifier as org.gradle.api.artifacts.component.ModuleComponentIdentifier
+    artifact.file.name to "${id.group.replace('.', '/')}/${id.module}/${id.version}/${artifact.file.name}"
+}
+val generateRuntimeCatalog = tasks.register<RuntimeCatalogTask>("generateRuntimeCatalog") {
+    artifacts.from(runtimeArtifacts.artifactFiles)
+    mavenPaths.set(resolvedMavenPaths)
+    catalogFile = layout.buildDirectory.file("generated/bootstrap/runtime-libraries.tsv")
+}
+tasks.processResources {
+    from(generateRuntimeCatalog.flatMap { it.catalogFile }) { into("META-INF/datavault") }
 }
 
-tasks.jar {
-    dependsOn(prepareRuntimeLibraries, ":api:classes")
+tasks.jar { enabled = false }
+
+tasks.shadowJar {
+    dependsOn(":api:classes")
+    archiveClassifier = ""
+    configurations = listOf(bootstrapLibraries)
     // The server provides our public API; Maven consumers still use the separate API artifact.
     from(project(":api").extensions.getByType<SourceSetContainer>().named("main").map { it.output })
-    manifest {
-        // Relative URLs work with the URLClassLoader used by older Bukkit versions as well.
-        attributes("Class-Path" to runtimeLibraries.files.sortedBy { it.name }.joinToString(" ") {
-            "DataVault-libraries/" + URI(null, null, it.name, null).toASCIIString()
-        })
-    }
+    relocate("net.byteflux.libby", "cn.missdrop.datavault.libs.libby")
+    relocate("me.lucko.jarrelocator", "cn.missdrop.datavault.libs.jarrelocator")
+    relocate("org.objectweb.asm", "cn.missdrop.datavault.libs.asm")
+    // Rewrites our implementation references; the driver is relocated later, not bundled here.
+    relocate("com.zaxxer.hikari", "cn.missdrop.datavault.libs.hikari")
+    exclude("module-info.class", "META-INF/versions/**/module-info.class")
 }
+tasks.assemble { dependsOn(tasks.shadowJar) }
 
-val pluginDistribution = tasks.register<Zip>("pluginDistribution") {
-    description = "Assembles an offline installation ZIP without merging dependency jars."
-    group = "distribution"
-    archiveBaseName = "DataVault"
-    destinationDirectory = layout.buildDirectory.dir("distributions")
-    from(tasks.jar)
-    from(prepareRuntimeLibraries) { into("DataVault-libraries") }
-    from("INSTALL.txt")
+// Copy only the release jar: the fixture must obtain drivers using the production downloader.
+val preparePackagedInstallation = tasks.register<Copy>("preparePackagedInstallation") {
+    from(tasks.shadowJar)
+    into(layout.buildDirectory.dir("test-installation"))
+    rename { "DataVault.jar" }
 }
-
-tasks.assemble {
-    dependsOn(pluginDistribution)
-}
+val installedPlugin = layout.buildDirectory.file("test-installation/DataVault.jar")
 
 tasks.test {
     exclude("**/PackagingTest.class")
@@ -119,23 +134,22 @@ tasks.register<Test>("backendBenchmark") {
     testLogging { events("passed", "failed", "standardOut") }
 }
 
-tasks.register<Test>("packagedBackendTest") {
-    description = "Verifies the thin plugin and manifest-loaded external libraries against real backends."
+tasks.register<JavaExec>("packagedBackendTest") {
+    description = "Verifies a single-jar installation with automatically downloaded Maven dependencies."
     group = "verification"
-    dependsOn(pluginDistribution)
-    testClassesDirs = sourceSets.test.get().output.classesDirs
-    // No development driver/API jars: the plugin manifest must supply the runtime dependencies.
-    classpath = files(sourceSets.test.get().output, tasks.jar.flatMap { it.archiveFile }) +
-        configurations.testRuntimeClasspath.get().filter {
-            it.name.startsWith("junit-") || it.name.startsWith("hamcrest-")
-        }
-    systemProperty("datavault.packaged.jar", tasks.jar.get().archiveFile.get().asFile.absolutePath)
-    systemProperty("datavault.packaged.zip", pluginDistribution.get().archiveFile.get().asFile.absolutePath)
-    include("**/integration/*DockerTest.class", "**/EmbeddedBackendTest.class", "**/RegistryTest.class",
-        "**/PackagingTest.class")
-    maxParallelForks = 1
-    outputs.upToDateWhen { false }
-    testLogging { events("passed", "failed") }
+    dependsOn(preparePackagedInstallation, tasks.testClasses)
+    // A JDK-only fixture creates a plugin-like loader; no development drivers enter that loader.
+    classpath = sourceSets.test.get().output
+    mainClass = "cn.missdrop.datavault.packaging.DownloadFixture"
+    args(installedPlugin.get().asFile.absolutePath)
+    args(sourceSets.test.get().output.classesDirs.files.map { it.absolutePath })
+    args(configurations.testRuntimeClasspath.get().filter {
+        it.name.startsWith("junit-") || it.name.startsWith("hamcrest-")
+    }.map { it.absolutePath })
+    providers.gradleProperty("testJavaHome").orNull?.let {
+        val windowsJava = file("$it/bin/java.exe")
+        setExecutable((if (windowsJava.isFile) windowsJava else file("$it/bin/java")).absolutePath)
+    }
 }
 
 tasks.register<Test>("mariaDbTest") {
