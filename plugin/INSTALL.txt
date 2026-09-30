@@ -1,0 +1,18 @@
+DataVault installation (Java 11 or newer)
+
+Extract this ZIP into the server's plugins directory. Keep these entries together:
+
+  plugins/DataVault-<version>.jar
+  plugins/DataVault-libraries/*.jar
+
+Do not copy the plugin JAR alone. Its manifest references the external library
+files by relative path. Do not move library jars into the plugins root directory,
+rename them, or replace their versions independently.
+
+The plugin JAR contains only DataVault's own implementation and public API.
+Third-party libraries are not merged, relocated, or downloaded at server startup.
+No Paper-specific loader or modern Bukkit libraries field is required.
+
+Dependent plugins should declare depend: [DataVault] and use the API as a
+compile-only dependency. MongoDB/Redis callback users also need matching native
+driver compile-only dependencies; do not bundle competing driver versions.

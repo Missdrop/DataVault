@@ -20,7 +20,7 @@ is added. Async JDBC scheduling still has a measurable fixed cost.
 ClickHouse uses the ordinary com.clickhouse:jdbc-v2 module with the explicit
 com.clickhouse.jdbc.Driver class. No :all classifier or legacy JDBC facade/HTTP
 transport is included. Required shared client/data libraries remain transitive
-dependencies; Shadow packages them with the server plugin.
+dependencies; the installation ZIP provides them as separate, unmodified JARs.
 
 Network JDBC defaults use three-second connection and ten-second socket deadlines;
 PostgreSQL uses seconds and the other drivers milliseconds. Explicit URL settings
@@ -51,8 +51,18 @@ rejected: JDBC would interpret them as options and undermine literal file owners
 Consumers using MongoDB/Redis callbacks must add matching compile-only native
 drivers. Do not bundle conflicting versions in dependent Bukkit plugins. Declare
 `depend: [DataVault]`; the server plugin provides the API and drivers. JDBC-only
-consumers need only DataVault's API and java.sql. Hikari is relocated because it is
-not public API. MongoDB/Lettuce packages remain unrelocated to preserve callback types.
+consumers need only DataVault's API and java.sql. Dependencies are not relocated;
+avoid bundling competing versions in dependent plugins.
+
+## Installation
+
+`./gradlew build` produces a thin plugin JAR containing only DataVault's own code
+and API. Use `plugin/build/distributions/DataVault-<version>.zip` for installation:
+extract the plugin JAR and `DataVault-libraries` directory together into `plugins`.
+The manifest references those external JARs by relative path; copying the plugin
+JAR alone is insufficient. No third-party classes are merged and no dependencies
+are downloaded at server startup. This does not require Paper or Bukkit's newer
+`libraries` feature. The separate Maven API artifact remains a normal library JAR.
 
 ## Isolation and performance
 

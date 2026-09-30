@@ -1,6 +1,7 @@
+import java.net.URI
+
 plugins {
     java
-    id("com.gradleup.shadow") version "9.6.1"
 }
 
 base {
@@ -51,28 +52,45 @@ tasks.processResources {
     }
 }
 
-tasks.shadowJar {
-    archiveClassifier = ""
-    relocate("com.zaxxer.hikari", "cn.missdrop.datavault.libs.hikari")
-    mergeServiceFiles()
-    // Let the service transformer see every JDBC provider descriptor.
-    filesMatching("META-INF/services/**") {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
-    filesMatching("META-INF/*.kotlin_module") {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
+// Preserve third-party jars (including native resources and service descriptors) unchanged.
+val runtimeLibraries = configurations.runtimeClasspath.get().incoming.artifactView {
+    componentFilter { it is org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+}.files
+val libraryDirectory = layout.buildDirectory.dir("libs/DataVault-libraries")
+val prepareRuntimeLibraries = tasks.register<Sync>("prepareRuntimeLibraries") {
+    description = "Copies external dependencies beside the thin plugin JAR."
+    from(runtimeLibraries)
+    into(libraryDirectory)
 }
 
 tasks.jar {
-    archiveClassifier = "plain"
+    dependsOn(prepareRuntimeLibraries, ":api:classes")
+    // The server provides our public API; Maven consumers still use the separate API artifact.
+    from(project(":api").extensions.getByType<SourceSetContainer>().named("main").map { it.output })
+    manifest {
+        // Relative URLs work with the URLClassLoader used by older Bukkit versions as well.
+        attributes("Class-Path" to runtimeLibraries.files.sortedBy { it.name }.joinToString(" ") {
+            "DataVault-libraries/" + URI(null, null, it.name, null).toASCIIString()
+        })
+    }
+}
+
+val pluginDistribution = tasks.register<Zip>("pluginDistribution") {
+    description = "Assembles an offline installation ZIP without merging dependency jars."
+    group = "distribution"
+    archiveBaseName = "DataVault"
+    destinationDirectory = layout.buildDirectory.dir("distributions")
+    from(tasks.jar)
+    from(prepareRuntimeLibraries) { into("DataVault-libraries") }
+    from("INSTALL.txt")
 }
 
 tasks.assemble {
-    dependsOn(tasks.shadowJar)
+    dependsOn(pluginDistribution)
 }
 
 tasks.test {
+    exclude("**/PackagingTest.class")
     exclude("**/*DockerTest.class")
     exclude("**/MariaDbIntegrationTest.class")
     exclude("**/PerformanceComparisonTest.class")
@@ -102,16 +120,18 @@ tasks.register<Test>("backendBenchmark") {
 }
 
 tasks.register<Test>("packagedBackendTest") {
-    description = "Runs real backend tests using only the shaded plugin and JUnit dependencies."
+    description = "Verifies the thin plugin and manifest-loaded external libraries against real backends."
     group = "verification"
-    dependsOn(tasks.shadowJar)
+    dependsOn(pluginDistribution)
     testClassesDirs = sourceSets.test.get().output.classesDirs
-    // Excluding development driver/API jars exposes missing service files and relocation mistakes.
-    classpath = files(sourceSets.test.get().output, tasks.shadowJar.flatMap { it.archiveFile }) +
+    // No development driver/API jars: the plugin manifest must supply the runtime dependencies.
+    classpath = files(sourceSets.test.get().output, tasks.jar.flatMap { it.archiveFile }) +
         configurations.testRuntimeClasspath.get().filter {
             it.name.startsWith("junit-") || it.name.startsWith("hamcrest-")
         }
-    include("**/integration/*DockerTest.class", "**/EmbeddedBackendTest.class", "**/RegistryTest.class")
+    systemProperty("datavault.packaged.jar", tasks.jar.get().archiveFile.get().asFile.absolutePath)
+    include("**/integration/*DockerTest.class", "**/EmbeddedBackendTest.class", "**/RegistryTest.class",
+        "**/PackagingTest.class")
     maxParallelForks = 1
     outputs.upToDateWhen { false }
     testLogging { events("passed", "failed") }

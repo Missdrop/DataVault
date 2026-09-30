@@ -12,8 +12,9 @@ Other operating systems can supply their equivalent installed Java home.
   batches, transaction capabilities, owner isolation and cleanup.
 - ./gradlew :plugin:backendBenchmark: all nine engines against direct drivers.
   Warm-up and rotated repeated rounds; no speed-dependent assertions. Requires Docker.
-- ./gradlew :plugin:packagedBackendTest: real backends using only the shaded
-  plugin JAR and JUnit; verifies service descriptors and Hikari relocation.
+- ./gradlew :plugin:packagedBackendTest: real backends using only the thin plugin
+  JAR and JUnit on the explicit classpath; drivers must load from manifest-referenced
+  external JARs. Also checks that no third-party classes were bundled.
 - ./gradlew :plugin:mariaDbTest: optional local MariaDB at 127.0.0.1:3306.
   Set DATAVAULT_TEST_USER and DATAVAULT_TEST_PASSWORD. Only dedicated datavault_test_
   tables are modified; the datavault_test database is retained.
@@ -59,4 +60,4 @@ shared server locks, CPU, disk, JVM or network.
 MongoDB pools are per server and add monitoring sockets. Redis and embedded engines
 also own native threads. Application-worker reservations are not an OS thread or
 total physical-connection cap. A live Bukkit server smoke test is still separate
-from these backend and shaded-JAR tests.
+from these backend and thin-JAR tests.
