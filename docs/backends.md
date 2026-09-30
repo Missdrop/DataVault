@@ -17,6 +17,11 @@ is added. Async JDBC scheduling still has a measurable fixed cost.
 | MongoDB | Separate MongoClient, bounded per-server pools/workers, direct BSON/cursors | Extra monitoring sockets; use native insertMany/bulkWrite for bulk workloads |
 | Redis | Separate multiplexed Lettuce connection/I/O; native async admission | No worker hop; no blocking commands or connection-global transactions/state changes |
 
+ClickHouse uses the ordinary com.clickhouse:jdbc-v2 module with the explicit
+com.clickhouse.jdbc.Driver class. No :all classifier or legacy JDBC facade/HTTP
+transport is included. Required shared client/data libraries remain transitive
+dependencies; Shadow packages them with the server plugin.
+
 Network JDBC defaults use three-second connection and ten-second socket deadlines;
 PostgreSQL uses seconds and the other drivers milliseconds. Explicit URL settings
 remain driver-authoritative. MongoDB URI settings may override network defaults,

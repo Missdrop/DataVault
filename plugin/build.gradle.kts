@@ -21,7 +21,8 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.13")
     implementation("com.h2database:h2:2.5.252")
     implementation("org.duckdb:duckdb_jdbc:1.5.6.0")
-    implementation("com.clickhouse:clickhouse-jdbc:0.9.3:all")
+    // Only JDBC v2 is used; avoid the facade/legacy HTTP transport and pre-shaded :all bundle.
+    implementation("com.clickhouse:jdbc-v2:0.9.3")
     implementation("org.mongodb:mongodb-driver-sync:5.6.1")
     implementation("io.lettuce:lettuce-core:6.8.1.RELEASE")
     testImplementation("junit:junit:4.13.2")

@@ -9,7 +9,8 @@ import com.zaxxer.hikari.HikariConfig;
 public final class ClickHouseBackend extends DriverBackend {
     @Override
     public void configure(DatabaseConfig config, HikariConfig pool) {
-        configureNetwork(pool, (ClickHouseConfig) config, "com.clickhouse.jdbc.ClickHouseDriver");
+        // Pin v2 instead of a facade that also probes the deprecated JDBC v1 implementation.
+        configureNetwork(pool, (ClickHouseConfig) config, "com.clickhouse.jdbc.Driver");
         pool.addDataSourceProperty("connection_timeout", "3000");
         pool.addDataSourceProperty("socket_timeout", "10000");
         // Keep driver compression enabled and preserve server durability/acknowledgment settings.
