@@ -1,0 +1,8 @@
+name: DataVault
+version: '${version}'
+main: cn.missdrop.datavault.plugin.DataVaultPlugin
+description: High-performance database services for Minecraft plugins.
+author: Missdrop
+website: https://github.com/Missdrop/DataVault
+api-version: '1.15'
+load: STARTUP
