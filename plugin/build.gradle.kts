@@ -39,6 +39,10 @@ tasks.shadowJar {
     archiveClassifier = ""
     relocate("com.zaxxer.hikari", "cn.missdrop.datavault.libs.hikari")
     mergeServiceFiles()
+    // Let the service transformer see every JDBC provider descriptor.
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 }
 
 tasks.jar {
