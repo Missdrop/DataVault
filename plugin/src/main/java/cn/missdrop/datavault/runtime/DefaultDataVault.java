@@ -2,11 +2,9 @@ package cn.missdrop.datavault.runtime;
 
 import cn.missdrop.datavault.api.*;
 import cn.missdrop.datavault.api.config.DatabaseConfig;
-import cn.missdrop.datavault.api.config.SqliteConfig;
 import cn.missdrop.datavault.runtime.connection.PoolFactory;
 import cn.missdrop.datavault.runtime.registry.ResourceBudget;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import cn.missdrop.datavault.runtime.registry.SqliteFiles;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -17,7 +15,7 @@ import java.util.concurrent.*;
 public final class DefaultDataVault implements DataVault {
     private final Object lock = new Object();
     private final Map<PluginId, Entry> entries = new HashMap<>();
-    private final Map<Path, PluginId> files = new HashMap<>();
+    private final SqliteFiles files = new SqliteFiles();
     private final PoolFactory pools = new PoolFactory();
     private final ResourceBudget budget;
     private final ThreadPoolExecutor lifecycle;
@@ -65,7 +63,7 @@ public final class DefaultDataVault implements DataVault {
     /** Opens the pool off-thread and releases every reservation on partial failure. */
     private void open(PluginId owner, Entry entry) {
         try {
-            reserveFile(owner, entry);
+            files.reserve(owner, entry.config);
             var pool = pools.open(owner, entry.config);
             JdbcDatabase database;
             try {
@@ -83,32 +81,12 @@ public final class DefaultDataVault implements DataVault {
         }
     }
 
-    /** Resolves symlinks before checking ownership; normalization alone does not do that. */
-    private void reserveFile(PluginId owner, Entry entry) throws Exception {
-        if (!(entry.config instanceof SqliteConfig)) {
-            return;
-        }
-        Path path = ((SqliteConfig) entry.config).file();
-        Files.createDirectories(path.getParent());
-        Path canonical = Files.exists(path) ? path.toRealPath()
-                : path.getParent().toRealPath().resolve(path.getFileName());
-        synchronized (lock) {
-            if (files.containsKey(canonical)) {
-                throw new IllegalStateException("SQLite file already registered");
-            }
-            files.put(canonical, owner);
-            entry.file = canonical;
-        }
-    }
-
     /** Identity-based removal makes repeated cleanup safe without releasing a newer entry. */
     private void release(PluginId owner, Entry entry) {
         synchronized (lock) {
             if (entries.remove(owner, entry)) {
                 budget.release(entry.config);
-                if (entry.file != null) {
-                    files.remove(entry.file, owner);
-                }
+                files.release(owner);
             }
         }
     }
@@ -181,7 +159,6 @@ public final class DefaultDataVault implements DataVault {
     private static final class Entry {
         final DatabaseConfig config;
         final CompletableFuture<JdbcDatabase> ready = new CompletableFuture<>();
-        Path file;
 
         Entry(DatabaseConfig config) {
             this.config = config;
