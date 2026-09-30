@@ -37,7 +37,9 @@ public final class PluginId {
     }
 
     @Override
-    public int hashCode() { return value.hashCode(); }
+    public int hashCode() {
+        return value.hashCode();
+    }
 
     @Override
     /**

@@ -46,3 +46,7 @@ world_the_end/
 *.db
 *.db-shm
 *.db-wal
+*.duckdb
+*.duckdb.wal
+*.mv.db
+*.trace.db

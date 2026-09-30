@@ -63,7 +63,7 @@ public class JdbcBenchmarkDockerTest {
                 statement.execute("INSERT INTO benchmark VALUES (1, 0)");
             }
             var paths = Arrays.<BenchmarkPath>asList(direct, asynchronous, new VaultPath(database));
-            ComparisonRunner.compare("ClickHouse", Workload.forTable("benchmark").get(0), paths);
+            ComparisonRunner.compare("ClickHouse", Workload.forNetworkTable("benchmark").get(0), paths);
             var batch = new Workload("append-100", 30, false, 100, connection -> {
                 try (var insert = connection.prepareStatement("INSERT INTO benchmark VALUES (?, ?)")) {
                     for (int id = 0; id < 100; id++) {

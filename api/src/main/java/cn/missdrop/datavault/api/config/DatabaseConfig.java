@@ -16,12 +16,18 @@ public interface DatabaseConfig extends StorageConfig<Database> {
      */
     ExecutionOptions execution();
 
-    /** @return per-owner pool limits; embedded stores retain their single connection */
+    /**
+     * Returns per-owner pool limits; embedded stores retain their single connection.
+     * @return per-owner pool limits; embedded stores retain their single connection
+     */
     default PoolOptions pool() {
         return new PoolOptions(1, 1, java.time.Duration.ofSeconds(3));
     }
 
-    /** @return whether the backend supports ordinary JDBC commit and rollback */
+    /**
+     * Returns whether the backend supports ordinary JDBC commit and rollback.
+     * @return whether the backend supports ordinary JDBC commit and rollback
+     */
     default boolean supportsTransactions() {
         return true;
     }

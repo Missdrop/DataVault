@@ -18,7 +18,12 @@ public interface DataVault {
         return register(owner, (StorageConfig<Database>) config);
     }
 
-    /** Opens a typed backend without pretending that native stores support JDBC transactions. */
+    /** Opens a typed backend without pretending that native stores support JDBC transactions.
+     * @param <S> public backend handle type
+     * @param owner stable plugin identifier
+     * @param config immutable backend settings
+     * @return stage completing with a ready typed handle
+     */
     <S extends Storage> CompletionStage<S> register(PluginId owner, StorageConfig<S> config);
 
     /**
@@ -30,10 +35,18 @@ public interface DataVault {
         return findStorage(owner).filter(Database.class::isInstance).map(Database.class::cast);
     }
 
-    /** Returns any ready backend, including native MongoDB and Redis handles. */
+    /** Returns any ready backend, including native MongoDB and Redis handles.
+     * @param owner stable plugin identifier
+     * @return ready backend, or empty during opening or after removal
+     */
     Optional<Storage> findStorage(PluginId owner);
 
-    /** Returns a handle only when its capabilities match the requested interface. */
+    /** Returns a handle only when its capabilities match the requested interface.
+     * @param <S> public backend handle type
+     * @param owner stable plugin identifier
+     * @param handleType requested public handle interface
+     * @return ready handle with matching capabilities, or empty
+     */
     default <S extends Storage> Optional<S> find(PluginId owner, Class<S> handleType) {
         return findStorage(owner).filter(handleType::isInstance).map(handleType::cast);
     }

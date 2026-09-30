@@ -3,7 +3,10 @@ package cn.missdrop.datavault.api.redis;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import java.util.concurrent.CompletionStage;
 
-/** Native command submission; returned stage must cover every submitted command. */
+/**
+ * Native command submission; returned stage must cover every submitted command.
+ * @param <T> asynchronous result type
+ */
 @FunctionalInterface
 public interface RedisOperation<T> {
     /**

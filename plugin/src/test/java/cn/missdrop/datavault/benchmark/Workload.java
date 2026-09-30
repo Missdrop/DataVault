@@ -22,7 +22,16 @@ final class Workload {
     }
 
     static List<Workload> forTable(String table) {
-        Workload read = new Workload("indexed-read", 1500, false, 0, connection -> {
+        return forTable(table, 1500, 400, 60);
+    }
+
+    /** Network round trips dominate runtime; retain six rounds without making server tests unbounded. */
+    static List<Workload> forNetworkTable(String table) {
+        return forTable(table, 500, 100, 20);
+    }
+
+    private static List<Workload> forTable(String table, int reads, int updates, int batches) {
+        Workload read = new Workload("indexed-read", reads, false, 0, connection -> {
             try (var query = connection.prepareStatement("SELECT balance FROM " + table + " WHERE id = ?")) {
                 query.setInt(1, 1);
                 try (var rows = query.executeQuery()) {
@@ -33,13 +42,13 @@ final class Workload {
                 }
             }
         });
-        Workload update = new Workload("single-update", 400, false, 1, connection -> {
+        Workload update = new Workload("single-update", updates, false, 1, connection -> {
             try (var query = connection.prepareStatement("UPDATE " + table + " SET balance = balance + 1 WHERE id = ?")) {
                 query.setInt(1, 1);
                 return query.executeUpdate();
             }
         });
-        Workload batch = new Workload("transaction-100", 60, true, 100, connection -> {
+        Workload batch = new Workload("transaction-100", batches, true, 100, connection -> {
             try (var query = connection.prepareStatement("UPDATE " + table + " SET balance = balance + 1 WHERE id = ?")) {
                 for (int i = 0; i < 100; i++) {
                     query.setInt(1, 1);

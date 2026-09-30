@@ -3,17 +3,32 @@ package cn.missdrop.datavault.api.config;
 import cn.missdrop.datavault.api.DatabaseType;
 import cn.missdrop.datavault.api.Storage;
 
-/** Typed immutable configuration. Handle type prevents casting native stores to JDBC. */
+/**
+ * Typed immutable configuration. Handle type prevents casting native stores to JDBC.
+ * @param <S> public backend handle type
+ */
 public interface StorageConfig<S extends Storage> {
-    /** @return backend selected by this configuration */
+    /**
+     * Returns backend selected by this configuration.
+     * @return backend selected by this configuration
+     */
     DatabaseType type();
 
-    /** @return per-owner admission limits */
+    /**
+     * Returns per-owner admission limits.
+     * @return per-owner admission limits
+     */
     ExecutionOptions execution();
 
-    /** @return maximum application connections reserved by this owner */
+    /**
+     * Returns maximum application connections reserved by this owner.
+     * @return maximum application connections reserved by this owner
+     */
     int connectionBudget();
 
-    /** @return public handle interface implemented by this backend */
+    /**
+     * Returns public handle interface implemented by this backend.
+     * @return public handle interface implemented by this backend
+     */
     Class<S> handleType();
 }

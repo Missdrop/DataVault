@@ -8,8 +8,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Tracks canonical local SQLite paths independently of pool and registry logic. */
-public final class SqliteFiles {
+/** Tracks canonical embedded database files independently of pool and registry logic. */
+public final class EmbeddedFiles {
     private final Map<Path, PluginId> owners = new HashMap<>();
 
     /** Performs filesystem I/O before acquiring the ownership lock. */
@@ -28,7 +28,7 @@ public final class SqliteFiles {
                 : path.getParent().toRealPath().resolve(path.getFileName());
         synchronized (owners) {
             if (owners.containsKey(canonical)) {
-                throw new IllegalStateException("SQLite file already registered");
+                throw new IllegalStateException("Embedded database file already registered");
             }
             owners.put(canonical, owner);
         }

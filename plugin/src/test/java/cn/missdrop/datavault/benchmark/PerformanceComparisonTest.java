@@ -55,7 +55,8 @@ public class PerformanceComparisonTest {
             }
             var paths = Arrays.<BenchmarkPath>asList(direct, asynchronous, new VaultPath(database));
             int expectedBalance = 0;
-            for (Workload workload : Workload.forTable(table)) {
+            var workloads = config instanceof FileDatabaseConfig ? Workload.forTable(table) : Workload.forNetworkTable(table);
+            for (Workload workload : workloads) {
                 ComparisonRunner.compare(backend, workload, paths);
                 expectedBalance += workload.writes * workload.iterations
                         * (ComparisonRunner.WARMUP + ComparisonRunner.ROUNDS) * paths.size();

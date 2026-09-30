@@ -80,7 +80,9 @@ public final class MysqlConfig implements DatabaseConfig {
     }
 
     @Override
-    public DatabaseType type() { return DatabaseType.MYSQL; }
+    public DatabaseType type() {
+        return DatabaseType.MYSQL;
+    }
 
     @Override
     /**

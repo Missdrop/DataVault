@@ -7,9 +7,13 @@ import cn.missdrop.datavault.api.redis.RedisStorage;
 import cn.missdrop.datavault.integration.DockerDatabase;
 import cn.missdrop.datavault.runtime.DefaultDataVault;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.TimeoutOptions;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.resource.DefaultClientResources;
 import java.util.LinkedHashMap;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +26,12 @@ public class RedisBenchmarkDockerTest {
             var vault = new DefaultDataVault(4, 4, 1024);
             var resources = DefaultClientResources.builder().ioThreadPoolSize(2).computationThreadPoolSize(2).build();
             String uri = "redis://127.0.0.1:" + server.port();
-            var client = RedisClient.create(resources, uri);
+            var endpoint = RedisURI.create(uri);
+            endpoint.setTimeout(Duration.ofSeconds(3));
+            var client = RedisClient.create(resources, endpoint);
+            client.setOptions(ClientOptions.builder().requestQueueSize(256)
+                    .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
+                    .timeoutOptions(TimeoutOptions.enabled(Duration.ofSeconds(3))).build());
             try {
                 var storage = server.await(() -> vault.register(PluginId.of("benchmark"), RedisConfig.of(uri)).toCompletableFuture().get(15, TimeUnit.SECONDS));
                 try (var connection = client.connect()) {

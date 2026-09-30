@@ -12,6 +12,7 @@ public final class PostgresqlBackend extends DriverBackend {
         configureNetwork(pool, (PostgresqlConfig) config, "org.postgresql.Driver");
         pool.addDataSourceProperty("connectTimeout", "3");
         pool.addDataSourceProperty("socketTimeout", "10");
+        pool.addDataSourceProperty("tcpKeepAlive", "true");
         pool.addDataSourceProperty("prepareThreshold", "5");
         pool.addDataSourceProperty("preparedStatementCacheQueries", "256");
         pool.addDataSourceProperty("preparedStatementCacheSizeMiB", "5");

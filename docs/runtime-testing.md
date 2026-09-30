@@ -1,48 +1,60 @@
 # Runtime verification
 
-## Running tests
+Run Gradle on Java 17 or newer; production code uses --release 11.
+Use -PtestJavaHome="C:/Program Files/Zulu/zulu-11" to run tests on Java 11.
+Other operating systems can supply their equivalent installed Java home.
 
-`./gradlew test` runs configuration, bounded-worker and real SQLite file tests.
-`./gradlew :plugin:mariaDbTest` runs opt-in local MariaDB tests using
-DATAVAULT_TEST_USER and DATAVAULT_TEST_PASSWORD environment variables. Credentials
-are never checked into source. The test connects to 127.0.0.1:3306, creates the
-dedicated datavault_test database if needed, and drops only its uniquely named
-datavault_test_ table. The empty database is retained for subsequent runs.
+## Test tasks
 
-Tests verify commits, rollbacks, connection-state reset, WAL, pool cleanup,
-duplicate registration, SQLite file conflicts, global resource budgets, queue
-overflow, draining shutdown and independence during a slow MariaDB query.
+- ./gradlew test: configuration, budgets, bounded admission, cancellation, rollback,
+  state reset and real SQLite, H2 and DuckDB files.
+- ./gradlew :plugin:backendIntegrationTest: six disposable Docker servers, CRUD,
+  batches, transaction capabilities, owner isolation and cleanup.
+- ./gradlew :plugin:backendBenchmark: all nine engines against direct drivers.
+  Warm-up and rotated repeated rounds; no speed-dependent assertions. Requires Docker.
+- ./gradlew :plugin:mariaDbTest: optional local MariaDB at 127.0.0.1:3306.
+  Set DATAVAULT_TEST_USER and DATAVAULT_TEST_PASSWORD. Only dedicated datavault_test_
+  tables are modified; the datavault_test database is retained.
+- ./gradlew :plugin:jdbcBenchmark: original SQLite/local MariaDB comparison,
+  requiring the same local credentials.
 
-## Local workload observation — 2026-09-30
+Pull images before Docker tasks to separate downloads from startup:
 
-One execution on the development machine using MariaDB 13.0.2:
+```sh
+docker pull mysql:8.4
+docker pull mariadb:11.4
+docker pull postgres:17
+docker pull mongo:7
+docker pull redis:7.4
+docker pull clickhouse/clickhouse-server:25.8
+```
 
-| Backend | Transaction batch | Elapsed | Observed throughput |
-| --- | ---: | ---: | ---: |
-| SQLite | 5,000 inserts | 13.09 ms | 382,018 rows/s |
-| MySQL driver against MariaDB | 2,000 inserts | 184.44 ms | 10,844 rows/s |
+Fixtures use unique datavault-test- names, the datavault.test=true label, ephemeral
+loopback ports and no persistent volumes. Startup retries have a deadline; test
+assertions are never retried. Containers are removed in finally/close paths.
+If a JVM is forcibly killed, inspect containers with that exact label and remove
+only leftover test containers, never unrelated Docker resources.
 
-These are single-run integration workload observations, including scheduling and
-commit, not warmed-up benchmarks or production performance guarantees. Database
-durability, batch behavior and protocol differ; do not compare backends using
-these numbers. Both runs verify the final row count.
+## Interpreting results
 
-## Current limits
+Reports and raw measurements belong in [reports/performance](../reports/performance),
+not this guide. JDBC paths share an identically tuned pool, identical callbacks
+and one worker. Native paths use equivalently configured independently owned clients.
+Baselines do not use DataVault admission or transaction code.
 
-- SQLite reads and writes share one worker. Heavy reads can delay writes.
-- MySQL defaults to a 3-second connect and 10-second socket timeout; explicit
-  URL options can override them. A socket timeout is not a transaction deadline.
-- Arbitrary application callbacks can block forever. Shutdown drains work and
-  has no forced deadline yet; the API does not promise bounded shutdown time.
-- Completion handlers may run on database workers and must be short. Heavy
-  handlers should use thenApplyAsync with an explicitly supplied executor.
-- Global queue reservations count task slots, not bytes retained by closures.
-- Canonical-path checks handle symlinks but do not enforce isolation against
-  hard links or external processes replacing files during registration.
-- MySQL compatibility is verified locally against MariaDB, not a MySQL server.
-- Java 11 is the compilation target; this test run used Java 25. A Java 11
-  runtime compatibility run and live Bukkit server smoke test are still needed.
+Compare DataVault primarily with a plugin-style asynchronous baseline. Synchronous
+JDBC has different scheduling costs. Fast embedded reads expose overhead; slower
+queries can hide it in noise. These are local closed-loop observations, not guarantees.
 
-Further performance work should focus on query/queue deadlines, finite shutdown,
-SQLite read concurrency, and warmed-up latency distributions rather than changing
-pool size blindly.
+## Remaining boundaries
+
+Arbitrary callbacks can block forever. Shutdown drains accepted work without a
+forced deadline. Completion handlers must be short; use explicitly supplied executors
+for expensive transformations. Queue limits count operations, not bytes. Canonical
+paths cannot detect hard links or external file replacement. Pools cannot isolate
+shared server locks, CPU, disk, JVM or network.
+
+MongoDB pools are per server and add monitoring sockets. Redis and embedded engines
+also own native threads. Application-worker reservations are not an OS thread or
+total physical-connection cap. Live Bukkit/package classloader smoke tests are
+separate from these backend tests.

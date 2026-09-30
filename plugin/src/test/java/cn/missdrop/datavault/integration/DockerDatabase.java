@@ -26,7 +26,11 @@ public final class DockerDatabase implements AutoCloseable {
             String binding = command(Arrays.asList("docker", "port", name, containerPort + "/tcp")).trim();
             port = Integer.parseInt(binding.substring(binding.lastIndexOf(':') + 1));
         } catch (Exception failure) {
-            close();
+            try {
+                close();
+            } catch (Exception cleanupFailure) {
+                failure.addSuppressed(cleanupFailure);
+            }
             throw failure;
         }
     }

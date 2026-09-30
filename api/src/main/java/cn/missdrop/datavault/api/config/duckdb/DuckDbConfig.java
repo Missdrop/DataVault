@@ -9,7 +9,12 @@ public final class DuckDbConfig extends EmbeddedJdbcConfig {
     private final int nativeThreads;
     private final int memoryLimitMb;
 
-    /** Prevents each plugin from starting an unbounded native analytics engine. */
+    /** Prevents each plugin from starting an unbounded native analytics engine.
+     * @param file dedicated database file or H2 file base
+     * @param queueCapacity maximum waiting operations
+     * @param nativeThreads maximum DuckDB execution threads
+     * @param memoryLimitMb DuckDB memory limit in MiB
+     */
     public DuckDbConfig(Path file, int queueCapacity, int nativeThreads, int memoryLimitMb) {
         super(DatabaseType.DUCKDB, file, queueCapacity);
         if (nativeThreads < 1 || memoryLimitMb < 16) {
@@ -19,14 +24,28 @@ public final class DuckDbConfig extends EmbeddedJdbcConfig {
         this.memoryLimitMb = memoryLimitMb;
     }
 
-    /** @return dedicated file with two native threads and a 256 MiB engine budget */
+    /**
+     * Returns dedicated file with two native threads and a 256 MiB engine budget.
+     * @return dedicated file with two native threads and a 256 MiB engine budget
+     * @param file dedicated database file or H2 file base
+     */
     public static DuckDbConfig of(Path file) {
         return new DuckDbConfig(file, 256, 2, 256);
     }
 
-    /** @return native query threads, separate from Java worker limits */
-    public int nativeThreads() { return nativeThreads; }
+    /**
+     * Returns native query threads, separate from Java worker limits.
+     * @return native query threads, separate from Java worker limits
+     */
+    public int nativeThreads() {
+        return nativeThreads;
+    }
 
-    /** @return engine memory budget in MiB; not a total process RSS guarantee */
-    public int memoryLimitMb() { return memoryLimitMb; }
+    /**
+     * Returns engine memory budget in MiB; not a total process RSS guarantee.
+     * @return engine memory budget in MiB; not a total process RSS guarantee
+     */
+    public int memoryLimitMb() {
+        return memoryLimitMb;
+    }
 }

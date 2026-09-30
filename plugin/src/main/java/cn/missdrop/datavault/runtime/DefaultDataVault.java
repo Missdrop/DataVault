@@ -3,7 +3,7 @@ package cn.missdrop.datavault.runtime;
 import cn.missdrop.datavault.api.*;
 import cn.missdrop.datavault.api.config.StorageConfig;
 import cn.missdrop.datavault.runtime.registry.ResourceBudget;
-import cn.missdrop.datavault.runtime.registry.SqliteFiles;
+import cn.missdrop.datavault.runtime.registry.EmbeddedFiles;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -14,7 +14,7 @@ import java.util.concurrent.*;
 public final class DefaultDataVault implements DataVault {
     private final Object lock = new Object();
     private final Map<PluginId, Entry> entries = new HashMap<>();
-    private final SqliteFiles files = new SqliteFiles();
+    private final EmbeddedFiles files = new EmbeddedFiles();
     private final StorageFactory storage = new StorageFactory();
     private final ResourceBudget budget;
     private final ThreadPoolExecutor lifecycle;

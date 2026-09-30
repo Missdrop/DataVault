@@ -10,7 +10,11 @@ public abstract class EmbeddedJdbcConfig implements FileDatabaseConfig {
     private final DatabaseType type;
     private final ExecutionOptions execution;
 
-    /** Normalizes file identity and serializes conflicting writes. */
+    /** Normalizes file identity and serializes conflicting writes.
+     * @param type concrete backend identity
+     * @param file dedicated database file or H2 file base
+     * @param queueCapacity maximum waiting operations
+     */
     protected EmbeddedJdbcConfig(DatabaseType type, Path file, int queueCapacity) {
         this.type = type;
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
@@ -18,11 +22,17 @@ public abstract class EmbeddedJdbcConfig implements FileDatabaseConfig {
     }
 
     @Override
-    public final Path file() { return file; }
+    public final Path file() {
+        return file;
+    }
 
     @Override
-    public final DatabaseType type() { return type; }
+    public final DatabaseType type() {
+        return type;
+    }
 
     @Override
-    public final ExecutionOptions execution() { return execution; }
+    public final ExecutionOptions execution() {
+        return execution;
+    }
 }

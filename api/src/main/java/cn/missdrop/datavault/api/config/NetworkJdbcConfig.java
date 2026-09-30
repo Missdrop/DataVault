@@ -12,7 +12,15 @@ public abstract class NetworkJdbcConfig implements DatabaseConfig {
     private final PoolOptions pool;
     private final ExecutionOptions execution;
 
-    /** Validates before any network I/O; credentials never appear in toString(). */
+    /** Validates before any network I/O; credentials never appear in toString().
+     * @param type concrete backend identity
+     * @param prefix accepted JDBC URL prefix
+     * @param url JDBC endpoint and optional driver settings
+     * @param username database login name
+     * @param password sensitive database password
+     * @param pool per-owner connection limits
+     * @param execution per-owner worker and queue limits
+     */
     protected NetworkJdbcConfig(DatabaseType type, String prefix, String url,
                                 String username, String password, PoolOptions pool,
                                 ExecutionOptions execution) {
@@ -30,21 +38,42 @@ public abstract class NetworkJdbcConfig implements DatabaseConfig {
         }
     }
 
-    /** @return JDBC endpoint and optional driver settings */
-    public final String jdbcUrl() { return url; }
+    /**
+     * Returns JDBC endpoint and optional driver settings.
+     * @return JDBC endpoint and optional driver settings
+     */
+    public final String jdbcUrl() {
+        return url;
+    }
 
-    /** @return database username */
-    public final String username() { return username; }
+    /**
+     * Returns database username.
+     * @return database username
+     */
+    public final String username() {
+        return username;
+    }
 
-    /** @return sensitive password for connection initialization only */
-    public final String password() { return password; }
+    /**
+     * Returns sensitive password for connection initialization only.
+     * @return sensitive password for connection initialization only
+     */
+    public final String password() {
+        return password;
+    }
 
     @Override
-    public final PoolOptions pool() { return pool; }
+    public final PoolOptions pool() {
+        return pool;
+    }
 
     @Override
-    public final DatabaseType type() { return type; }
+    public final DatabaseType type() {
+        return type;
+    }
 
     @Override
-    public final ExecutionOptions execution() { return execution; }
+    public final ExecutionOptions execution() {
+        return execution;
+    }
 }

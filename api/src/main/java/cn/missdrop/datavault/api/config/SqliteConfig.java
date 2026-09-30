@@ -67,7 +67,9 @@ public final class SqliteConfig implements FileDatabaseConfig {
     }
 
     @Override
-    public DatabaseType type() { return DatabaseType.SQLITE; }
+    public DatabaseType type() {
+        return DatabaseType.SQLITE;
+    }
 
     @Override
     /**

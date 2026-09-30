@@ -2,7 +2,10 @@ package cn.missdrop.datavault.api.mongodb;
 
 import com.mongodb.client.MongoDatabase;
 
-/** Scoped synchronous MongoDB work, executed off the server thread. */
+/**
+ * Scoped synchronous MongoDB work, executed off the server thread.
+ * @param <T> detached callback result type
+ */
 @FunctionalInterface
 public interface MongoOperation<T> {
     /**

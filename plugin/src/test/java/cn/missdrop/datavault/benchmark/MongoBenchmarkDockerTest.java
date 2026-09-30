@@ -27,6 +27,8 @@ public class MongoBenchmarkDockerTest {
                     new ArrayBlockingQueue<>(256), new ThreadPoolExecutor.AbortPolicy());
             String uri = "mongodb://127.0.0.1:" + server.port();
             var settings = MongoClientSettings.builder().applyConnectionString(new ConnectionString(uri))
+                    .applyToClusterSettings(builder -> builder.serverSelectionTimeout(3, TimeUnit.SECONDS))
+                    .applyToSocketSettings(builder -> builder.connectTimeout(3, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS))
                     .applyToConnectionPoolSettings(builder -> builder.maxSize(1).minSize(1).maxWaitTime(3, TimeUnit.SECONDS)).build();
             try (var client = MongoClients.create(settings)) {
                 var config = new MongoConfig(uri, "datavault_test", new PoolOptions(1, 1, Duration.ofSeconds(3)), new ExecutionOptions(1, 256));
