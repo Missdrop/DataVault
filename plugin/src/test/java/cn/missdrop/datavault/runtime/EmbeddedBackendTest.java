@@ -2,6 +2,7 @@ package cn.missdrop.datavault.runtime;
 
 import cn.missdrop.datavault.api.PluginId;
 import cn.missdrop.datavault.api.config.FileDatabaseConfig;
+import cn.missdrop.datavault.api.config.SqliteConfig;
 import cn.missdrop.datavault.api.config.h2.H2Config;
 import cn.missdrop.datavault.api.config.duckdb.DuckDbConfig;
 import java.sql.SQLException;
@@ -15,6 +16,11 @@ import static org.junit.Assert.*;
 /** Real embedded engines; neither JDBC behavior nor native file creation is mocked. */
 public class EmbeddedBackendTest {
     @Rule public TemporaryFolder temporary = new TemporaryFolder();
+
+    @Test
+    public void sqliteUsesDedicatedWalFileAndRealTransactions() throws Exception {
+        verify(SqliteConfig.of(temporary.getRoot().toPath().resolve("sqlite.db")));
+    }
 
     @Test
     public void h2UsesDedicatedMvStoreAndRealTransactions() throws Exception {

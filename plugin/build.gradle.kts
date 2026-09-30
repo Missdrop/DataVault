@@ -58,6 +58,9 @@ tasks.shadowJar {
     filesMatching("META-INF/services/**") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 }
 
 tasks.jar {
@@ -95,6 +98,22 @@ tasks.register<Test>("backendBenchmark") {
     maxParallelForks = 1
     outputs.upToDateWhen { false }
     testLogging { events("passed", "failed", "standardOut") }
+}
+
+tasks.register<Test>("packagedBackendTest") {
+    description = "Runs real backend tests using only the shaded plugin and JUnit dependencies."
+    group = "verification"
+    dependsOn(tasks.shadowJar)
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    // Excluding development driver/API jars exposes missing service files and relocation mistakes.
+    classpath = files(sourceSets.test.get().output, tasks.shadowJar.flatMap { it.archiveFile }) +
+        configurations.testRuntimeClasspath.get().filter {
+            it.name.startsWith("junit-") || it.name.startsWith("hamcrest-")
+        }
+    include("**/integration/*DockerTest.class", "**/EmbeddedBackendTest.class", "**/RegistryTest.class")
+    maxParallelForks = 1
+    outputs.upToDateWhen { false }
+    testLogging { events("passed", "failed") }
 }
 
 tasks.register<Test>("mariaDbTest") {

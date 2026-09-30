@@ -69,6 +69,21 @@ publishing {
                     url = "https://github.com/Missdrop/DataVault"
                 }
             }
+
+            // Maven has no compileOnlyApi scope: keep native clients optional for JDBC-only users.
+            pom.withXml {
+                val root = asElement()
+                val dependencies = root.getElementsByTagName("dependency")
+                for (index in 0 until dependencies.length) {
+                    val dependency = dependencies.item(index) as org.w3c.dom.Element
+                    val group = dependency.getElementsByTagName("groupId").item(0).textContent
+                    if (group in setOf("org.mongodb", "io.lettuce")) {
+                        dependency.appendChild(root.ownerDocument.createElement("optional").apply {
+                            textContent = "true"
+                        })
+                    }
+                }
+            }
         }
     }
 }
