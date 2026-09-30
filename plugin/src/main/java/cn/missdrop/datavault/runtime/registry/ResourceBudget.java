@@ -24,6 +24,9 @@ public final class ResourceBudget {
     /** Checks all dimensions before updating any counter, so rejection is atomic. */
     public void reserve(StorageConfig<?> config) {
         int requested = connections(config);
+        if (requested < 1) {
+            throw new IllegalArgumentException("Connection budget must be positive");
+        }
         if (requested > connectionLimit - connections
                 || config.execution().workers() > workerLimit - workers
                 || config.execution().queueCapacity() > queueLimit - queues) {

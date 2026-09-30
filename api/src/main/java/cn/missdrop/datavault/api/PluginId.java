@@ -41,8 +41,8 @@ public final class PluginId {
 
     @Override
     /**
-     * Returns function toString() { [native code] }.
-     * @return function toString() { [native code] }
+     * Returns the stable identifier for logging and diagnostics.
+     * @return validated lowercase identifier
      */
     public String toString() {
         return value;
