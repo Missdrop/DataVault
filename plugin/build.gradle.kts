@@ -55,6 +55,7 @@ tasks.assemble {
 
 tasks.test {
     exclude("**/MariaDbIntegrationTest.class")
+    exclude("**/PerformanceComparisonTest.class")
 }
 
 tasks.register<Test>("mariaDbTest") {
@@ -65,5 +66,17 @@ tasks.register<Test>("mariaDbTest") {
     include("**/MariaDbIntegrationTest.class")
     environment("DATAVAULT_TEST_PASSWORD", providers.environmentVariable("DATAVAULT_TEST_PASSWORD").getOrElse(""))
     environment("DATAVAULT_TEST_USER", providers.environmentVariable("DATAVAULT_TEST_USER").getOrElse("root"))
+    outputs.upToDateWhen { false }
+}
+
+tasks.register<Test>("jdbcBenchmark") {
+    description = "Compares direct JDBC, plugin-style async JDBC and DataVault on local databases."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/PerformanceComparisonTest.class")
+    environment("DATAVAULT_TEST_PASSWORD", providers.environmentVariable("DATAVAULT_TEST_PASSWORD").getOrElse(""))
+    environment("DATAVAULT_TEST_USER", providers.environmentVariable("DATAVAULT_TEST_USER").getOrElse("root"))
+    maxParallelForks = 1
     outputs.upToDateWhen { false }
 }
