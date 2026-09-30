@@ -15,6 +15,8 @@ java {
 dependencies {
     implementation(project(":api"))
     implementation("com.zaxxer:HikariCP:7.1.0")
+    implementation("org.xerial:sqlite-jdbc:3.53.4.0")
+    implementation("com.mysql:mysql-connector-j:9.4.0")
     testImplementation("junit:junit:4.13.2")
     compileOnly("org.bukkit:bukkit:1.15.2-R0.1-SNAPSHOT")
 }
@@ -36,6 +38,7 @@ tasks.processResources {
 tasks.shadowJar {
     archiveClassifier = ""
     relocate("com.zaxxer.hikari", "cn.missdrop.datavault.libs.hikari")
+    mergeServiceFiles()
 }
 
 tasks.jar {
