@@ -9,7 +9,7 @@ import java.util.Objects;
  * Dedicated local file. Runtime providers must reject owners sharing an active
  * file, including symlink aliases, and initialize every connection consistently.
  */
-public final class SqliteConfig implements DatabaseConfig {
+public final class SqliteConfig implements FileDatabaseConfig {
     private final Path file;
     private final Duration busyTimeout;
     private final boolean wal;

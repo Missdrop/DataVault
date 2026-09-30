@@ -11,6 +11,19 @@ import static org.junit.Assert.*;
 
 public class ConfigurationTest {
     @Test
+    public void backendSpecificConfigsRejectInvalidSchemesAndResources() {
+        assertThrows(IllegalArgumentException.class, () ->
+                cn.missdrop.datavault.api.config.postgresql.PostgresqlConfig.of(
+                        "jdbc:mysql://localhost/db", "user", "password"));
+        assertThrows(IllegalArgumentException.class, () ->
+                new cn.missdrop.datavault.api.config.duckdb.DuckDbConfig(Path.of("analytics.db"), 256, 0, 256));
+        assertFalse(cn.missdrop.datavault.api.config.clickhouse.ClickHouseConfig
+                .of("jdbc:clickhouse://localhost:8123/default", "default", "").supportsTransactions());
+        assertEquals(1, cn.missdrop.datavault.api.config.h2.H2Config.of(Path.of("local"))
+                .connectionBudget());
+    }
+
+    @Test
     public void ownerHasValueEqualityAndRejectsUnsafeIdentifiers() {
         assertEquals(PluginId.of("economy"), PluginId.of("economy"));
         assertEquals(PluginId.of("economy").hashCode(), PluginId.of("economy").hashCode());

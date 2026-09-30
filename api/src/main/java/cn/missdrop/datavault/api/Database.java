@@ -7,7 +7,7 @@ import java.util.concurrent.CompletionStage;
  * Callbacks and completion handlers may run on database workers. Game-state
  * changes require platform scheduling; never wait on the server thread.
  */
-public interface Database {
+public interface Database extends Storage {
     /**
      * Returns stable owner identity.
      * @return stable owner identity
