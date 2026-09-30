@@ -1,7 +1,6 @@
 package cn.missdrop.datavault.runtime.registry;
 
-import cn.missdrop.datavault.api.config.DatabaseConfig;
-import cn.missdrop.datavault.api.config.MysqlConfig;
+import cn.missdrop.datavault.api.config.StorageConfig;
 
 /** Registry-lock guarded reservations, including databases still opening. */
 public final class ResourceBudget {
@@ -23,7 +22,7 @@ public final class ResourceBudget {
     }
 
     /** Checks all dimensions before updating any counter, so rejection is atomic. */
-    public void reserve(DatabaseConfig config) {
+    public void reserve(StorageConfig<?> config) {
         int requested = connections(config);
         if (requested > connectionLimit - connections
                 || config.execution().workers() > workerLimit - workers
@@ -36,13 +35,13 @@ public final class ResourceBudget {
     }
 
     /** Called once after removal of the matching registration, including failed opens. */
-    public void release(DatabaseConfig config) {
+    public void release(StorageConfig<?> config) {
         connections -= connections(config);
         workers -= config.execution().workers();
         queues -= config.execution().queueCapacity();
     }
 
-    private int connections(DatabaseConfig config) {
-        return config instanceof MysqlConfig ? ((MysqlConfig) config).pool().maximumSize() : 1;
+    private int connections(StorageConfig<?> config) {
+        return config.connectionBudget();
     }
 }

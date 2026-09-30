@@ -1,29 +1,55 @@
 package cn.missdrop.datavault.runtime.connection;
 
+import cn.missdrop.datavault.api.DatabaseType;
 import cn.missdrop.datavault.api.PluginId;
 import cn.missdrop.datavault.api.config.*;
-import com.mysql.cj.jdbc.MysqlDataSource;
+import cn.missdrop.datavault.runtime.backend.sqlite.SqliteBackend;
+import cn.missdrop.datavault.runtime.backend.mysql.MysqlBackend;
+import cn.missdrop.datavault.runtime.backend.mariadb.MariaDbBackend;
+import cn.missdrop.datavault.runtime.backend.postgresql.PostgresqlBackend;
+import cn.missdrop.datavault.runtime.backend.h2.H2Backend;
+import cn.missdrop.datavault.runtime.backend.duckdb.DuckDbBackend;
+import cn.missdrop.datavault.runtime.backend.clickhouse.ClickHouseBackend;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.file.Files;
 import java.sql.Connection;
-import org.sqlite.SQLiteConfig;
-import org.sqlite.SQLiteDataSource;
+import java.util.EnumMap;
+import java.util.Map;
 
-/** Builds and validates one owner's pool. Driver-specific settings stay here. */
+/** Validates and owns pools; backend implementations own driver-specific tuning. */
 public final class PoolFactory {
-    /** Validates the first connection before returning ownership to the caller. */
+    private final Map<DatabaseType, JdbcBackend> backends = new EnumMap<>(DatabaseType.class);
+
+    /** Driver classes are loaded only when their backend is selected. */
+    public PoolFactory() {
+        backends.put(DatabaseType.SQLITE, new SqliteBackend());
+        backends.put(DatabaseType.MYSQL, new MysqlBackend());
+        backends.put(DatabaseType.MARIADB, new MariaDbBackend());
+        backends.put(DatabaseType.POSTGRESQL, new PostgresqlBackend());
+        backends.put(DatabaseType.H2, new H2Backend());
+        backends.put(DatabaseType.DUCKDB, new DuckDbBackend());
+        backends.put(DatabaseType.CLICKHOUSE, new ClickHouseBackend());
+    }
+
+    /** Opens and validates one pool; failed validation never leaks it. */
     public HikariDataSource open(PluginId owner, DatabaseConfig config) throws Exception {
+        JdbcBackend backend = backends.get(config.type());
+        if (backend == null) {
+            throw new IllegalArgumentException("Backend is not JDBC: " + config.type());
+        }
         HikariConfig pool = new HikariConfig();
         pool.setPoolName("DataVault-" + owner.value());
-        pool.setMinimumIdle(0);
-        if (config instanceof SqliteConfig) {
-            configureSqlite(pool, (SqliteConfig) config);
-        } else if (config instanceof MysqlConfig) {
-            configureMysql(pool, (MysqlConfig) config);
-        } else {
-            throw new IllegalArgumentException("Unsupported database configuration");
+        pool.setMaximumPoolSize(config.pool().maximumSize());
+        pool.setMinimumIdle(config.pool().minimumIdle());
+        pool.setConnectionTimeout(config.pool().acquisitionTimeout().toMillis());
+        if (config instanceof FileDatabaseConfig) {
+            Files.createDirectories(((FileDatabaseConfig) config).file().getParent());
+            // Retain embedded state/cache instead of reopening the native engine on idle or lifetime expiry.
+            pool.setMaxLifetime(0);
+            pool.setIdleTimeout(0);
         }
+        backend.configure(config, pool);
         HikariDataSource source = new HikariDataSource(pool);
         try (Connection connection = source.getConnection()) {
             if (!connection.isValid(3)) {
@@ -34,35 +60,5 @@ public final class PoolFactory {
             source.close();
             throw failure;
         }
-    }
-
-    /** A single connection and worker serialize per-file access; WAL preserves external readers. */
-    private void configureSqlite(HikariConfig pool, SqliteConfig config) throws Exception {
-        Files.createDirectories(config.file().getParent());
-        SQLiteConfig settings = new SQLiteConfig();
-        settings.setBusyTimeout((int) config.busyTimeout().toMillis());
-        settings.enforceForeignKeys(true);
-        settings.setJournalMode(config.wal()
-                ? SQLiteConfig.JournalMode.WAL : SQLiteConfig.JournalMode.DELETE);
-        SQLiteDataSource source = new SQLiteDataSource(settings);
-        source.setUrl("jdbc:sqlite:" + config.file());
-        pool.setDataSource(source);
-        pool.setMaximumPoolSize(1);
-        pool.setConnectionTimeout(3000);
-    }
-
-    /** Supplies a driver data source directly, avoiding dependence on global driver discovery. */
-    private void configureMysql(HikariConfig pool, MysqlConfig config) throws Exception {
-        MysqlDataSource source = new MysqlDataSource();
-        source.setUrl(config.jdbcUrl());
-        // Driver settings can be overridden explicitly in the URL.
-        source.setConnectTimeout(3000);
-        source.setSocketTimeout(10000);
-        pool.setDataSource(source);
-        pool.setUsername(config.username());
-        pool.setPassword(config.password());
-        pool.setMaximumPoolSize(config.pool().maximumSize());
-        pool.setMinimumIdle(config.pool().minimumIdle());
-        pool.setConnectionTimeout(config.pool().acquisitionTimeout().toMillis());
     }
 }

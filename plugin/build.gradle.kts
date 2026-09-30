@@ -17,6 +17,13 @@ dependencies {
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("org.xerial:sqlite-jdbc:3.53.4.0")
     implementation("com.mysql:mysql-connector-j:9.4.0")
+    implementation("org.mariadb.jdbc:mariadb-java-client:3.5.10")
+    implementation("org.postgresql:postgresql:42.7.13")
+    implementation("com.h2database:h2:2.5.252")
+    implementation("org.duckdb:duckdb_jdbc:1.5.6.0")
+    implementation("com.clickhouse:clickhouse-jdbc:0.9.3:all")
+    implementation("org.mongodb:mongodb-driver-sync:5.6.1")
+    implementation("io.lettuce:lettuce-core:6.8.1.RELEASE")
     testImplementation("junit:junit:4.13.2")
     compileOnly("org.bukkit:bukkit:1.15.2-R0.1-SNAPSHOT")
 }

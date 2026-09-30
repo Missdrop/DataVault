@@ -14,6 +14,7 @@ public final class JdbcDatabase implements Database {
     private final PluginId owner;
     private final DatabaseType type;
     private final HikariDataSource pool;
+    private final boolean transactions;
     private final DatabaseExecutor executor;
 
     /** Takes ownership of a validated pool and connects its cleanup to worker termination. */
@@ -26,6 +27,7 @@ public final class JdbcDatabase implements Database {
         this.owner = owner;
         this.type = config.type();
         this.pool = pool;
+        this.transactions = config.supportsTransactions();
         this.executor = new DatabaseExecutor(owner.value(), config.execution(), () -> {
             try {
                 pool.close();
@@ -59,6 +61,10 @@ public final class JdbcDatabase implements Database {
     @Override
     public <T> CompletionStage<T> transaction(SqlOperation<T> operation) {
         Objects.requireNonNull(operation, "operation");
+        if (!transactions) {
+            return java.util.concurrent.CompletableFuture.failedFuture(
+                    new UnsupportedOperationException(type + " does not support JDBC transactions"));
+        }
         return executor.submit(() -> {
             try (Connection connection = pool.getConnection()) {
                 return Transactions.run(connection, operation);

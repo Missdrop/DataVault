@@ -1,8 +1,8 @@
 package cn.missdrop.datavault.runtime.registry;
 
 import cn.missdrop.datavault.api.PluginId;
-import cn.missdrop.datavault.api.config.DatabaseConfig;
-import cn.missdrop.datavault.api.config.SqliteConfig;
+import cn.missdrop.datavault.api.config.StorageConfig;
+import cn.missdrop.datavault.api.config.FileDatabaseConfig;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -13,11 +13,15 @@ public final class SqliteFiles {
     private final Map<Path, PluginId> owners = new HashMap<>();
 
     /** Performs filesystem I/O before acquiring the ownership lock. */
-    public void reserve(PluginId owner, DatabaseConfig config) throws Exception {
-        if (!(config instanceof SqliteConfig)) {
+    public void reserve(PluginId owner, StorageConfig<?> config) throws Exception {
+        if (!(config instanceof FileDatabaseConfig)) {
             return;
         }
-        Path path = ((SqliteConfig) config).file();
+        Path path = ((FileDatabaseConfig) config).file();
+        // H2's physical file uses this suffix; reserve the actual file, not just its URL base.
+        if (config.type() == cn.missdrop.datavault.api.DatabaseType.H2) {
+            path = path.resolveSibling(path.getFileName() + ".mv.db");
+        }
         Files.createDirectories(path.getParent());
         // Normalize is insufficient: symlink aliases must resolve to the same ownership key.
         Path canonical = Files.exists(path) ? path.toRealPath()
