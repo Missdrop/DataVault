@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
+import java.util.zip.ZipFile;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -26,6 +27,22 @@ public class PackagingTest {
                 assertTrue(entry.startsWith("DataVault-libraries/"));
                 assertTrue("Missing library: " + entry, Files.isRegularFile(
                         Path.of(plugin.toUri().resolve(entry))));
+            }
+        }
+    }
+
+    @Test
+    public void installationZipContainsThePluginAndEveryReferencedLibrary() throws Exception {
+        Path plugin = packagedJar();
+        try (JarFile jar = new JarFile(plugin.toFile());
+                ZipFile distribution = new ZipFile(System.getProperty("datavault.packaged.zip"))) {
+            assertEquals(Files.size(plugin), distribution.getEntry(plugin.getFileName().toString()).getSize());
+            assertNotNull(distribution.getEntry("INSTALL.txt"));
+            String classPath = jar.getManifest().getMainAttributes().getValue(Attributes.Name.CLASS_PATH);
+            for (String entry : classPath.split(" ")) {
+                assertNotNull("Library missing from installation ZIP: " + entry, distribution.getEntry(entry));
+                assertEquals(Files.size(Path.of(plugin.toUri().resolve(entry))),
+                        distribution.getEntry(entry).getSize());
             }
         }
     }

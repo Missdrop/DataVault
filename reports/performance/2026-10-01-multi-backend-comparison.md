@@ -78,7 +78,7 @@ representative queries before establishing performance thresholds.
 
 - API tests: 4 passed; plugin unit/embedded tests: 9 passed.
 - Development-classpath Docker tests: 6 passed on Java 11.
-- Final shaded-JAR tests: 11 passed on Java 11 (six servers, three embedded engines,
+- Original benchmark revision's shaded-JAR tests: 11 passed on Java 11 (six servers, three embedded engines,
   two resource-registry cases).
 - All-backend benchmark: 9 passed; final unbundled ClickHouse rerun: 1 passed.
 - Javadoc generated without warnings; final POM marks native API clients optional.
@@ -130,3 +130,24 @@ MongoDB sync 5.6.1; Lettuce 6.8.1.RELEASE.
 
 Raw measurements: [CSV](2026-10-01-multi-backend-comparison.csv).
 Backend settings and usage: [guide](../../docs/backends.md).
+
+## Thin distribution follow-up
+
+The original benchmark verification above preceded the packaging correction.
+Shadow and fat-JAR assembly have now been removed. The plugin contains only its
+own implementation and API (67,623 bytes); external dependencies remain unchanged
+JARs in the adjacent `DataVault-libraries` directory. The installation ZIP is
+124,395,259 bytes: separating libraries does not eliminate their native payloads.
+No runtime downloader or Paper-specific loader was added.
+
+`build :plugin:packagedBackendTest` passed on Java 11 after this change: 14 cases,
+covering six Docker servers, three embedded engines, two registry cases and three
+packaging checks. Packaging checks reject bundled third-party classes, verify
+every manifest dependency exists in the ZIP, and initialize all nine driver/client
+entry points through a URLClassLoader with only the Java platform as its parent.
+The explicit backend-test classpath contains no development driver/API JARs;
+external drivers load through the plugin manifest. Test containers were removed.
+
+Performance measurements were not rerun for this packaging-only correction;
+the earlier CSV remains historical data, not a new thin-distribution benchmark.
+A live Bukkit server smoke test remains outstanding.

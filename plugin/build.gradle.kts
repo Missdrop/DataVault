@@ -130,6 +130,7 @@ tasks.register<Test>("packagedBackendTest") {
             it.name.startsWith("junit-") || it.name.startsWith("hamcrest-")
         }
     systemProperty("datavault.packaged.jar", tasks.jar.get().archiveFile.get().asFile.absolutePath)
+    systemProperty("datavault.packaged.zip", pluginDistribution.get().archiveFile.get().asFile.absolutePath)
     include("**/integration/*DockerTest.class", "**/EmbeddedBackendTest.class", "**/RegistryTest.class",
         "**/PackagingTest.class")
     maxParallelForks = 1
