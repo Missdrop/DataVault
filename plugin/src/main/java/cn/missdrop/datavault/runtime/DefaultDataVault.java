@@ -67,13 +67,12 @@ public final class DefaultDataVault implements DataVault {
             var pool = pools.open(owner, entry.config);
             JdbcDatabase database;
             try {
-                database = new JdbcDatabase(owner, entry.config, pool);
+                database = new JdbcDatabase(owner, entry.config, pool, () -> release(owner, entry));
             } catch (Throwable failure) {
                 pool.close();
                 throw failure;
             }
-            // Direct handle closure must release registry resources just like unregister().
-            database.whenClosed().whenComplete((ignored, failure) -> release(owner, entry));
+            // The database releases its reservation before completing a direct close().
             entry.ready.complete(database);
         } catch (Throwable failure) {
             release(owner, entry);

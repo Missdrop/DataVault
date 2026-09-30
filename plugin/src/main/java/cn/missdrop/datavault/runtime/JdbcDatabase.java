@@ -18,10 +18,21 @@ public final class JdbcDatabase implements Database {
 
     /** Takes ownership of a validated pool and connects its cleanup to worker termination. */
     public JdbcDatabase(PluginId owner, DatabaseConfig config, HikariDataSource pool) {
+        this(owner, config, pool, () -> {});
+    }
+
+    /** Registry cleanup completes before close() reports success to the owner. */
+    JdbcDatabase(PluginId owner, DatabaseConfig config, HikariDataSource pool, Runnable released) {
         this.owner = owner;
         this.type = config.type();
         this.pool = pool;
-        this.executor = new DatabaseExecutor(owner.value(), config.execution(), pool::close);
+        this.executor = new DatabaseExecutor(owner.value(), config.execution(), () -> {
+            try {
+                pool.close();
+            } finally {
+                released.run();
+            }
+        });
     }
 
     @Override

@@ -29,6 +29,8 @@ public class RegistryTest {
             assertFalse(vault.find(a).isPresent());
             vault.register(b, config).toCompletableFuture().get(5, TimeUnit.SECONDS);
             assertEquals(1, vault.owners().size());
+            vault.find(b).orElseThrow().close().toCompletableFuture().get(5, TimeUnit.SECONDS);
+            assertFalse(vault.find(b).isPresent());
         } finally {
             vault.shutdown().toCompletableFuture().get(5, TimeUnit.SECONDS);
         }

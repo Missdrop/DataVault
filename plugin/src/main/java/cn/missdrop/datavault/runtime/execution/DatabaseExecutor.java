@@ -31,14 +31,16 @@ public final class DatabaseExecutor {
             @Override
             protected void terminated() {
                 // Keep resource cleanup off the thread requesting shutdown.
-                CompletableFuture.runAsync(() -> {
+                Thread cleanup = new Thread(() -> {
                     try {
                         onTermination.run();
                         terminated.complete(null);
                     } catch (Throwable failure) {
                         terminated.completeExceptionally(failure);
                     }
-                });
+                }, "DataVault-" + owner + "-cleanup");
+                cleanup.setDaemon(true);
+                cleanup.start();
             }
         };
         workers.allowCoreThreadTimeOut(true);
